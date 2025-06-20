@@ -2,9 +2,14 @@
 """
 Example usage of the invoice generation system
 """
-
 from src.invoice_generator import InvoiceGenerator
 from src.models import Invoice, Company, Client, InvoiceItem
+from src.invoice_qrcode import InvoiceQRGenerator
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 def create_sample_invoice():
     """Create a sample invoice using the data models"""
@@ -58,23 +63,64 @@ def create_sample_invoice():
     return invoice
 
 def main():
-    """Main function to generate invoice"""
+    """Main function to generate invoice with QR code"""
     
     # Create sample invoice
     invoice = create_sample_invoice()
     
-    # Initialize generator
-    generator = InvoiceGenerator()
+    # Cloudinary configuration - use environment variables for security
+    cloudinary_config = {
+        'cloud_name': os.getenv('CLOUDINARY_CLOUD_NAME', 'your_cloud_name'),
+        'api_key': os.getenv('CLOUDINARY_API_KEY', 'your_api_key'),
+        'api_secret': os.getenv('CLOUDINARY_API_SECRET', 'your_api_secret')
+    }
     
-    # Generate PDF
-    pdf_path = f"output/pdf/invoice_{invoice.invoice_number}.pdf"
-    generator.generate_pdf(invoice.to_dict(), pdf_path)
+    # Initialize QR code generator
+    qr_generator = InvoiceQRGenerator(cloudinary_config)
     
-    # Generate HTML preview
-    html_path = f"output/html/invoice_{invoice.invoice_number}.html"
-    generator.generate_html(invoice.to_dict(), html_path)
+    # Initialize invoice generator with QR generator
+    generator = InvoiceGenerator(qr_generator=qr_generator)
     
-    print("Invoice generation completed!")
+    # Convert invoice to dictionary
+    invoice_data = invoice.to_dict()
+    
+    print(f"Generating invoice {invoice.invoice_number} with QR code...")
+    
+    try:
+        # Generate PDF with QR code
+        pdf_path = f"output/pdf/invoice_{invoice.invoice_number}.pdf"
+        generator.generate_pdf_with_qr(invoice_data, pdf_path, generate_qr=True)
+        
+        # Generate HTML preview (optional - without QR for now)
+        html_path = f"output/html/invoice_{invoice.invoice_number}.html"
+        generator.generate_html(invoice_data, html_path)
+        
+        print("Invoice generation completed!")
+        print(f"PDF: {pdf_path}")
+        print(f"HTML: {html_path}")
+        
+        # Print QR code info if available
+        if 'qr_code_path' in invoice_data:
+            print(f"QR Code URL: {invoice_data['qr_code_path']}")
+            print(f"QR Public ID: {invoice_data.get('qr_public_id', 'N/A')}")
+        
+    except Exception as e:
+        print(f"Error generating invoice: {e}")
+        
+    # Optional: Generate just the QR code separately for testing
+    try:
+        print("\nGenerating standalone QR code for testing...")
+        qr_result = qr_generator.generate_and_upload_qr(invoice_data)
+        
+        if qr_result['success']:
+            print(f"QR Code generated successfully!")
+            print(f"Cloudinary URL: {qr_result['secure_url']}")
+            print(f"Public ID: {qr_result['public_id']}")
+        else:
+            print(f"QR Code generation failed: {qr_result['error']}")
+            
+    except Exception as e:
+        print(f"Error generating QR code: {e}")
 
 if __name__ == "__main__":
     main()
