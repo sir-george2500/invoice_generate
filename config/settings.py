@@ -1,6 +1,13 @@
 import os
 from pathlib import Path
+"""
+Application Configuration
+"""
+import os
+from dotenv import load_dotenv
 
+
+load_dotenv()
 # Base directory
 BASE_DIR = Path(__file__).parent.parent
 
@@ -27,3 +34,41 @@ PDF_OPTIONS = {
 DEFAULT_TEMPLATE = "invoice_template.html"
 COMPANY_LOGO = "somelogo.png"
 RWANDA_SEAL = "seaRR.png"
+
+
+class Settings:
+    """Application settings"""
+    
+    # VSDC API Configuration
+    VSDC_API_URL = "http://localhost:8080/vsdc/trnsSales/saveSales"
+    
+    # Cloudinary Configuration
+    CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET')
+    
+    # Company Information
+    COMPANY_NAME = "KABISA ELECTRIC Ltd"
+    COMPANY_ADDRESS = "KIGALI CITY NYARUGENGE NYARUGENGE Nyarugenge"
+    COMPANY_TEL = "0785757324"
+    COMPANY_EMAIL = "finance@gokabisa.com"
+    COMPANY_TIN = "120732779"
+    
+    # VSDC Configuration
+    VSDC_TIN = "944000008"
+    VSDC_BHF_ID = "00"
+    VSDC_SDC_ID = "SDC010053151"
+    VSDC_MRC = "WIS00058003"
+    
+    @property
+    def cloudinary_config(self) -> dict:
+        return {
+            'cloud_name': self.CLOUDINARY_CLOUD_NAME,
+            'api_key': self.CLOUDINARY_API_KEY,
+            'api_secret': self.CLOUDINARY_API_SECRET
+        }
+    
+    def is_cloudinary_configured(self) -> bool:
+        return all(self.cloudinary_config.values())
+
+settings = Settings()

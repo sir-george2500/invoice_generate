@@ -26,6 +26,7 @@ class Client:
     name: str
     tin: str
 
+
 @dataclass
 class Invoice:
     company: Company
@@ -40,6 +41,7 @@ class Invoice:
     total_rwf: str
     total_aex: str
     total_b: str
+    total_tax_a: str  # Added this field
     total_tax_b: str
     total_tax: str
     rwanda_seal_path: str = "seaRR.png"
@@ -76,6 +78,7 @@ class Invoice:
             'total_rwf': self.total_rwf,
             'total_aex': self.total_aex,
             'total_b': self.total_b,
+            'total_tax_a': self.total_tax_a,  # Added this to the dictionary
             'total_tax_b': self.total_tax_b,
             'total_tax': self.total_tax,
             'rwanda_seal_path': self.rwanda_seal_path,

@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from jinja2 import Template, FileSystemLoader, Environment
+from jinja2 import FileSystemLoader, Environment
 from weasyprint import HTML
 
 class InvoiceGenerator:
