@@ -102,8 +102,8 @@ class PayloadTransformer:
                 "bhfId": "00",
                 "invcNo": invoice_no+ random.randint(1, 1000),  # Adding a random number to avoid duplicates
                 "orgInvcNo": 0,
-                "custTin": None,
-                "prcOrdCd": None,
+                "custTin": "998000003",
+                "prcOrdCd": "708955",
                 "custNm": customer_name,
                 "salesTyCd": "N",
                 "rcptTyCd": "S",

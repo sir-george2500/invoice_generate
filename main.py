@@ -31,15 +31,11 @@ payload_transformer = PayloadTransformer(vsdc_service)
 
 @app.post("/webhooks/zoho/invoice")
 async def handle_zoho_webhook(request: Request):
-    """Enhanced webhook endpoint with dynamic tax calculation"""
+    """Enhanced webhook endpoint with dynamic tax calculation and proper VSDC error handling"""
     try:
         # Get the raw JSON payload
         zoho_payload = await request.json()
         logger.info(f"Received Zoho webhook payload")
-
-          # Get the raw JSON payload
-        zoho_payload = await request.json()
-         
         
         # Transform Zoho payload to VSDC format
         vsdc_payload = payload_transformer.transform_zoho_to_vsdc(zoho_payload)
@@ -54,57 +50,121 @@ async def handle_zoho_webhook(request: Request):
                 headers={"Content-Type": "application/json"}
             )
             
+            # VSDC always returns HTTP 200, check resultCd in response body
             if response.status_code == 200:
-                ebm_response = response.json()
-
-                # Log
-                logger.info(f"Successfully forwarded to VSDC API: {ebm_response.get('invcNo')}")
-                
-                # Generate advanced PDF with QR code
                 try:
-                    pdf_result = await vsdc_service.generate_advanced_pdf(ebm_response, zoho_payload, vsdc_payload)
-
-
-                    
-                    return JSONResponse(
-                        status_code=200,
-                        content={
-                            "message": "Webhook processed successfully with dynamic tax calculation",
-                            "invoice_number": vsdc_payload["invcNo"],
-                            "vsdc_response": ebm_response,
-                            "pdf_generation": pdf_result,
-                            "download_url": f"/download-pdf/{pdf_result['pdf_filename']}",
-                            "tax_summary": {
-                                "total_tax_a": f"{ebm_response.get('taxAmtA', 0):,.2f}",
-                                "total_tax_b": f"{ebm_response.get('taxAmtB', 0):,.2f}",
-                                "total_tax": f"{ebm_response.get('totTaxAmt', 0):,.2f}"
-                            }
-                        }
+                    ebm_response = response.json()
+                except ValueError as e:
+                    logger.error(f"Invalid JSON response from VSDC: {response.text}")
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"Invalid JSON response from VSDC API: {str(e)}"
                     )
+                
+                # Check VSDC result code (000 means success)
+                result_code = ebm_response.get('resultCd', '999')
+                result_message = ebm_response.get('resultMsg', 'Unknown error')
+                
+                if result_code == '000':
+                    # Success case
+                    logger.info(f"Successfully processed by VSDC API: {vsdc_payload['invcNo']}")
                     
-                except Exception as pdf_error:
-                    logger.error(f"Error generating advanced PDF: {str(pdf_error)}")
+                    # Generate advanced PDF with QR code
+                    try:
+                        pdf_result = await vsdc_service.generate_advanced_pdf(ebm_response, zoho_payload, vsdc_payload)
+                        
+                        return JSONResponse(
+                            status_code=200,
+                            content={
+                                "message": "Webhook processed successfully with dynamic tax calculation",
+                                "invoice_number": vsdc_payload["invcNo"],
+                                "vsdc_response": ebm_response,
+                                "pdf_generation": pdf_result,
+                                "download_url": f"/download-pdf/{pdf_result['pdf_filename']}",
+                                "tax_summary": {
+                                    "total_tax_a": f"{ebm_response.get('taxAmtA', 0):,.2f}",
+                                    "total_tax_b": f"{ebm_response.get('taxAmtB', 0):,.2f}",
+                                    "total_tax": f"{ebm_response.get('totTaxAmt', 0):,.2f}"
+                                }
+                            }
+                        )
+                        
+                    except Exception as pdf_error:
+                        logger.error(f"Error generating advanced PDF: {str(pdf_error)}")
+                        return JSONResponse(
+                            status_code=200,
+                            content={
+                                "message": "Webhook forwarded successfully but PDF generation failed",
+                                "invoice_number": vsdc_payload["invcNo"],
+                                "vsdc_response": ebm_response,
+                                "pdf_error": str(pdf_error),
+                                "tax_summary": {
+                                    "total_tax_a": f"{ebm_response.get('taxAmtA', 0):,.2f}",
+                                    "total_tax_b": f"{ebm_response.get('taxAmtB', 0):,.2f}",
+                                    "total_tax": f"{ebm_response.get('totTaxAmt', 0):,.2f}"
+                                }
+                            }
+                        )
+                else:
+                    # VSDC API returned an error
+                    logger.error(f"VSDC API error - Code: {result_code}, Message: {result_message}")
+                    
+                    # Map common VSDC error codes to appropriate HTTP status codes
+                    error_mapping = {
+                        '881': 400,  # Purchase is mandatory
+                        '882': 400,  # Purchase code is invalid
+                        '883': 409,  # Purchase already used
+                        '884': 400,  # Invalid customer TIN
+                        '901': 401,  # Not valid device
+                        '910': 400,  # Request parameter error
+                        '921': 422,  # Sales data cannot be received
+                        '922': 422,  # Sales invoice data can be received after sales data
+                        '994': 409,  # Overlapped data
+                    }
+                    
+                    http_status = error_mapping.get(result_code, 422)  # Default to 422 for unprocessable entity
+                    
                     return JSONResponse(
-                        status_code=200,
+                        status_code=http_status,
                         content={
-                            "message": "Webhook forwarded successfully but PDF generation failed",
+                            "message": "VSDC API processing failed",
                             "invoice_number": vsdc_payload["invcNo"],
-                            "vsdc_response": ebm_response,
-                            "pdf_error": str(pdf_error)
+                            "vsdc_error": {
+                                "code": result_code,
+                                "message": result_message,
+                                "full_response": ebm_response
+                            },
+                            "error_type": "vsdc_business_logic_error"
                         }
                     )
             else:
-                logger.error(f"Failed to forward to VSDC API: {response.status_code}")
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"Failed to forward to VSDC API: {response.text}"
+                # HTTP-level error (network, server down, etc.)
+                logger.error(f"HTTP error from VSDC API: {response.status_code} - {response.text}")
+                return JSONResponse(
+                    status_code=502,
+                    content={
+                        "message": "Failed to communicate with VSDC API",
+                        "invoice_number": vsdc_payload["invcNo"],
+                        "http_error": {
+                            "status_code": response.status_code,
+                            "response_text": response.text
+                        },
+                        "error_type": "vsdc_communication_error"
+                    }
                 )
                 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing webhook: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "Internal server error while processing webhook",
+                "error": str(e),
+                "error_type": "internal_processing_error"
+            }
+        )
 
 @app.get("/download-pdf/{filename}")
 async def serve_pdf_file(filename: str):
