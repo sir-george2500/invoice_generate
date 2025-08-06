@@ -203,65 +203,8 @@ async def get_pdf_list():
         logger.error(f"Error listing PDFs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error listing PDFs: {str(e)}")
 
-# @app.post("/test/generate-advanced-pdf")
-# async def test_pdf_generation():
-#     """Test the advanced PDF generation with sample data"""
-#     try:
-#         # Sample EBM response
-#         sample_ebm_response = {
-#             "tin": settings.VSDC_TIN,
-#             "invcNo": 12345,
-#             "custNm": "ALSM ADVISORY LTD",
-#             "custTin": "118692892",
-#             "totAmt": 85000.00,
-#             "taxblAmtB": 85000.00,
-#             "taxAmtB": 15300.00,
-#             "totTaxAmt": 15300.00,
-#             "itemList": [
-#                 {
-#                     "itemCd": "SRV001",
-#                     "itemNm": "Software Development",
-#                     "qty": 40,
-#                     "taxTyCd": "B",
-#                     "prc": 1500,
-#                     "totAmt": 60000.00
-#                 },
-#                 {
-#                     "itemCd": "SRV002",
-#                     "itemNm": "System Integration",
-#                     "qty": 1,
-#                     "taxTyCd": "B",
-#                     "prc": 25000,
-#                     "totAmt": 25000.00
-#                 }
-#             ]
-#         }
-#
-#         # Sample Zoho data
-#         sample_zoho_data = {
-#             "invoice": {
-#                 "customer_name": "ALSM ADVISORY LTD",
-#                 "invoice_number": "TEST-12345",
-#                 "date": datetime.now().strftime("%Y-%m-%d")
-#             }
-#         }
-#
-#         # Generate advanced PDF
-#         pdf_result = await vsdc_service.generate_advanced_pdf(sample_ebm_response, sample_zoho_data,vsdc_payload)
-#
-#         return JSONResponse(
-#             status_code=200,
-#             content={
-#                 "message": "Advanced test PDF generated successfully",
-#                 "pdf_generation": pdf_result,
-#                 "download_url": f"/download-pdf/{pdf_result['pdf_filename']}"
-#             }
-#         )
-        
-#    except Exception as e:
-#        logger.error(f"Error generating test PDF: {str(e)}")
- #       raise HTTPException(status_code=500, detail=f"Error generating test PDF: {str(e)}")
 
+        
 @app.post("/test/transform-payload")
 async def test_payload_transform():
     """Test payload transformation with sample Zoho data"""
@@ -380,6 +323,30 @@ async def handle_global_exception(request: Request, exc: Exception):
             "timestamp": datetime.now().isoformat()
         }
     )
+
+@app.post("/webhooks/zoho/credit-note")
+async def handle_zoho_credit_note_webhook(request: Request):
+    """
+    Webhook endpoint for Zoho Credit Note events.
+    For now, we only log and return the payload without processing.
+    """
+    try:
+        credit_note_payload = await request.json()
+        logger.info("Received Zoho Credit Note webhook payload")
+
+        # Just return the payload (you can transform or forward later)
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "Credit Note webhook received successfully",
+                "payload": credit_note_payload
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing credit note webhook: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing credit note webhook: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

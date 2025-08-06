@@ -45,7 +45,6 @@ class PayloadTransformer:
             
             # Extract invoice data
             invoice_data = zoho_payload.get("invoice", zoho_payload)
-            
             # Extract numeric invoice number
             invoice_number_raw = str(invoice_data.get("invoice_number")).strip()
             try:
@@ -63,27 +62,34 @@ class PayloadTransformer:
             
             customer_name = invoice_data.get("customer_name", "Unknown Customer")
 
-            # FIX: Extract TINs correctly
+            # FIX: Extract TINs and Purchase Code correctly
             custom_field_hash = invoice_data.get("custom_field_hash", {})
+
             tin = custom_field_hash.get("cf_tin")
             cust_tin = custom_field_hash.get("cf_custtin")
+            purchase_code = custom_field_hash.get("cf_purchasecode")
 
             # Fallback: check custom_fields list if hash is missing
-            if not tin or not cust_tin:
+            if not tin or not cust_tin or not purchase_code:
                 for field in invoice_data.get("custom_fields", []):
-                    if field.get("api_name") == "cf_tin":
+                    api_name = field.get("api_name")
+                    if api_name == "cf_tin":
                         tin = tin or field.get("value")
-                    elif field.get("api_name") == "cf_custtin":
+                    elif api_name == "cf_custtin":
                         cust_tin = cust_tin or field.get("value")
+                    elif api_name == "cf_purchasecode":
+                        purchase_code = purchase_code or field.get("value")
 
             # Strip whitespace
             if tin:
                 tin = tin.strip()
             if cust_tin:
                 cust_tin = cust_tin.strip()
+            if purchase_code:
+                purchase_code = purchase_code.strip()
 
-            logger.info(f"Customer TIN and TIN: {cust_tin}, {tin}")
-            
+            logger.info(f"Customer TIN and TIN: {cust_tin}, {tin}, Purchase Code: {purchase_code}")
+
             # Get customer mobile
             customer_mobile = None
             contact_persons = invoice_data.get("contact_persons_details", [])
@@ -121,7 +127,7 @@ class PayloadTransformer:
                 "invcNo": invoice_no + random.randint(1, 1000),
                 "orgInvcNo": 0,
                 "custTin": cust_tin if cust_tin else None,
-                "prcOrdCd": "560999",
+                "prcOrdCd": purchase_code if purchase_code else None,
                 "custNm": customer_name,
                 "salesTyCd": "N",
                 "rcptTyCd": "S",
