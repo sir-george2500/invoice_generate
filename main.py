@@ -324,17 +324,20 @@ async def handle_global_exception(request: Request, exc: Exception):
         }
     )
 
+
 @app.post("/webhooks/zoho/credit-note")
 async def handle_zoho_credit_note_webhook(request: Request):
     """
     Webhook endpoint for Zoho Credit Note events.
-    For now, we only log and return the payload without processing.
+    For now, we log and return the payload without processing.
     """
     try:
         credit_note_payload = await request.json()
-        logger.info("Received Zoho Credit Note webhook payload")
 
-        # Just return the payload (you can transform or forward later)
+        # Log the entire payload
+        logger.info("Received Zoho Credit Note webhook payload:")
+        logger.info(credit_note_payload)
+
         return JSONResponse(
             status_code=200,
             content={
@@ -346,7 +349,6 @@ async def handle_zoho_credit_note_webhook(request: Request):
     except Exception as e:
         logger.error(f"Error processing credit note webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing credit note webhook: {str(e)}")
-
 
 if __name__ == "__main__":
     import uvicorn
