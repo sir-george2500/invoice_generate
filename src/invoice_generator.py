@@ -9,6 +9,19 @@ class InvoiceGenerator:
         self.env = Environment(loader=FileSystemLoader(self.template_dir))
         self.qr_generator = qr_generator  # Add QR generator support
         
+    def _get_template_name(self, invoice_data, template_name):
+        """Determine the appropriate template based on invoice type"""
+        # If template_name is explicitly provided, use it (backward compatibility)
+        if template_name != "invoice_template.html":
+            return template_name
+            
+        # Auto-detect template based on invoice_type in data
+        invoice_type = invoice_data.get('invoice_type', '').lower()
+        if invoice_type == 'credit note':
+            return "credit_note_template.html"
+        else:
+            return "invoice_template.html"  # Default to invoice template
+        
     def generate_pdf(self, invoice_data, output_path="output/pdf/invoice.pdf", template_name="invoice_template.html"):
         """Generate PDF invoice from template and data"""
         
@@ -19,8 +32,11 @@ class InvoiceGenerator:
         # Update image paths to be absolute file URLs
         invoice_data = self._update_asset_paths(invoice_data)
         
+        # Determine the correct template to use
+        actual_template_name = self._get_template_name(invoice_data, template_name)
+        
         # Load and render template
-        template = self.env.get_template(template_name)
+        template = self.env.get_template(actual_template_name)
         html_content = template.render(**invoice_data)
         
         # CRITICAL: Set base_url to the template directory
@@ -63,7 +79,10 @@ class InvoiceGenerator:
         
         invoice_data = self._update_asset_paths(invoice_data)
         
-        template = self.env.get_template(template_name)
+        # Determine the correct template to use
+        actual_template_name = self._get_template_name(invoice_data, template_name)
+        
+        template = self.env.get_template(actual_template_name)
         html_content = template.render(**invoice_data)
         
         with open(output_path, 'w', encoding='utf-8') as f:
@@ -96,7 +115,11 @@ class InvoiceGenerator:
         """Generate PDF as bytes"""
         
         invoice_data = self._update_asset_paths(invoice_data)
-        template = self.env.get_template(template_name)
+        
+        # Determine the correct template to use
+        actual_template_name = self._get_template_name(invoice_data, template_name)
+        
+        template = self.env.get_template(actual_template_name)
         html_content = template.render(**invoice_data)
         
         # Set base_url for asset resolution
@@ -122,7 +145,11 @@ class InvoiceGenerator:
         
         # Update paths and generate PDF bytes
         invoice_data = self._update_asset_paths(invoice_data)
-        template = self.env.get_template(template_name)
+        
+        # Determine the correct template to use
+        actual_template_name = self._get_template_name(invoice_data, template_name)
+        
+        template = self.env.get_template(actual_template_name)
         html_content = template.render(**invoice_data)
         
         base_url = self.template_dir.resolve().as_uri() + "/"
@@ -130,6 +157,27 @@ class InvoiceGenerator:
         pdf_bytes = html_doc.write_pdf()
         
         return pdf_bytes, invoice_data.get('qr_public_id')  # Return public_id for cleanup if needed
+    
+    # Additional convenience methods for credit notes
+    def generate_credit_note_pdf(self, invoice_data, output_path="output/pdf/credit_note.pdf", generate_qr=True):
+        """Generate credit note PDF - convenience method"""
+        invoice_data['invoice_type'] = 'Credit Note'
+        return self.generate_pdf_with_qr(
+            invoice_data, 
+            output_path, 
+            template_name="credit_note_template.html", 
+            generate_qr=generate_qr
+        )
+    
+    def generate_credit_note_html(self, invoice_data, output_path="output/html/credit_note.html", generate_qr=True):
+        """Generate credit note HTML - convenience method"""
+        invoice_data['invoice_type'] = 'Credit Note'
+        return self.generate_html_with_qr(
+            invoice_data, 
+            output_path, 
+            template_name="credit_note_template.html", 
+            generate_qr=generate_qr
+        )
     
     def _update_asset_paths(self, invoice_data):
         """Convert image paths to absolute file URLs for WeasyPrint, keep Cloudinary URLs as-is"""

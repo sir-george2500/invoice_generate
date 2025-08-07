@@ -227,3 +227,51 @@ class VSSDCInvoiceService:
         except Exception as e:
             logger.error(f"Error generating advanced PDF: {str(e)}")
             raise PDFGenerationError(f"Error generating advanced PDF: {str(e)}")
+
+    async def generate_credit_note_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: dict) -> Dict[str, Any]:
+        """Generate PDF for credit note (refund)"""
+        try:
+            # Convert using the same method, but modify some fields to reflect refund
+            invoice = self.convert_ebm_response_to_invoice_model(ebm_response, zoho_data, vsdc_payload)
+            
+            # Adjust totals (display as positive numbers, but note that it's a refund)
+            invoice.total_rwf = f"{abs(float(invoice.total_rwf.replace(',', ''))):,.2f}"
+            invoice.total_b = f"{abs(float(invoice.total_b.replace(',', ''))):,.2f}"
+            invoice.total_tax_b = f"{abs(float(invoice.total_tax_b.replace(',', ''))):,.2f}"
+            invoice.total_tax = f"{abs(float(invoice.total_tax.replace(',', ''))):,.2f}"
+            
+            invoice_data = invoice.to_dict()
+            invoice_data["invoice_type"] = "Credit Note"  # Set it in the dictionary instead
+            
+            filename_base = f"credit_note_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            pdf_path = f"output/pdf/{filename_base}.pdf"
+            html_path = f"output/html/{filename_base}.html"
+            
+            self.invoice_generator.generate_pdf_with_qr(
+                invoice_data,
+                pdf_path,
+                generate_qr=bool(self.qr_generator)
+            )
+            
+            self.invoice_generator.generate_html(invoice_data, html_path)
+            
+            result = {
+                "pdf_path": pdf_path,
+                "pdf_filename": f"{filename_base}.pdf",
+                "html_path": html_path,
+                "html_filename": f"{filename_base}.html",
+                "invoice_number": invoice.invoice_number,
+                "is_credit_note": True,
+                "qr_code_generated": 'qr_code_path' in invoice_data
+            }
+            
+            if 'qr_code_path' in invoice_data:
+                result["qr_code_url"] = invoice_data['qr_code_path']
+                result["qr_public_id"] = invoice_data.get('qr_public_id')
+            
+            logger.info(f"Credit note PDF generated: {filename_base}.pdf")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error generating credit note PDF: {str(e)}")
+            raise PDFGenerationError(f"Failed to generate credit note PDF: {str(e)}")

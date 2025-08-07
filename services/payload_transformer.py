@@ -235,4 +235,127 @@ class PayloadTransformer:
         except Exception as e:
             logger.error(f"Error transforming payload: {str(e)}")
             raise HTTPException(status_code=400, detail=f"Error processing payload: {str(e)}")
-
+    def transform_zoho_credit_note_to_vsdc(self, zoho_payload: dict) -> dict:
+        try:
+            credit_note = zoho_payload.get("creditnote", {})
+            
+            # Extract TINs
+            custom_fields = credit_note.get("custom_fields", [])
+            tin = next((f["value"] for f in custom_fields if f.get("api_name") == "cf_tn"), "000000000")
+            customer_tin = next((f["value"] for f in custom_fields if f.get("api_name") == "cf_customer_tin"), None)
+            
+            credit_note_number = credit_note.get("creditnote_number", "CN0000")
+            invoice_number = credit_note.get("invoices_credited", [{}])[0].get("invoice_number", "INV0000")
+            customer_name = credit_note.get("customer_name", "Unknown Customer")
+            items = credit_note.get("line_items", [])
+            refund_date = credit_note.get("date", datetime.now().strftime("%Y-%m-%d"))
+            
+            invc_no = int(''.join(filter(str.isdigit, credit_note_number)) or random.randint(100000, 999999))
+            org_invc_no = int(''.join(filter(str.isdigit, invoice_number)) or 0)
+            
+            # Totals
+            taxbl_amt_b = 0
+            tax_amt_b = 0
+            total_amt = 0
+            item_list = []
+            
+            for idx, item in enumerate(items, start=1):
+                # Extract the exact same way as your working invoice transform
+                price = float(item.get("rate", 0))
+                quantity = float(item.get("quantity", 1))
+                supply_amount = round(price * quantity, 2)
+                
+                # Use the imported calculate_tax function, not self.calculate_tax
+                # This matches exactly what your working invoice transform does
+                tax_amount = calculate_tax(supply_amount)
+                
+                item_name = item.get("name") or item.get("description") or f"Item_{idx}"
+                
+                vsdc_item = {
+                    "itemSeq": idx,
+                    "itemCd": item.get("item_id") or f"RW1NTXU000000{idx:02d}",
+                    "itemClsCd": item.get("item_class_code", f"50{idx}211080{idx}"),
+                    "itemNm": item_name,
+                    "bcd": None,
+                    "pkgUnitCd": "NT",
+                    "pkg": 1,
+                    "qtyUnitCd": "U",
+                    "qty": quantity,
+                    "prc": price,
+                    "splyAmt": supply_amount,
+                    "dcRt": 0,
+                    "dcAmt": 0,
+                    "isrccCd": None,
+                    "isrccNm": None,
+                    "isrcRt": None,
+                    "isrcAmt": None,
+                    "taxTyCd": "B",
+                    "taxblAmt": supply_amount,
+                    "taxAmt": tax_amount,
+                    "totAmt": supply_amount
+                }
+                
+                item_list.append(vsdc_item)
+                taxbl_amt_b += supply_amount
+                tax_amt_b += tax_amount
+                total_amt += supply_amount
+            
+            vsdc_payload = {
+                "tin": tin,
+                "bhfId": "00",
+                "invcNo": invc_no,
+                "orgInvcNo": org_invc_no,
+                "custTin": None,
+                "prcOrdCd": None,
+                "custNm": customer_name,
+                "salesTyCd": "N",
+                "rcptTyCd": "R",  # Refund receipt
+                "pmtTyCd": "01",
+                "salesSttsCd": "02",
+                "cfmDt": datetime.now().strftime("%Y%m%d%H%M%S"),
+                "salesDt": datetime.strptime(refund_date, "%Y-%m-%d").strftime("%Y%m%d"),
+                "stockRlsDt": datetime.now().strftime("%Y%m%d%H%M%S"),
+                "cnclReqDt": None,
+                "cnclDt": None,
+                "rfdDt": datetime.strptime(refund_date, "%Y-%m-%d").strftime("%Y%m%d%H%M%S"),
+                "rfdRsnCd": "01",
+                "totItemCnt": len(items),
+                "taxblAmtA": 0,
+                "taxblAmtB": round(taxbl_amt_b, 2),
+                "taxblAmtC": 0,
+                "taxblAmtD": 0,
+                "taxRtA": 0,
+                "taxRtB": 18,
+                "taxRtC": 0,
+                "taxRtD": 0,
+                "taxAmtA": 0,
+                "taxAmtB": round(tax_amt_b, 2),
+                "taxAmtC": 0,
+                "taxAmtD": 0,
+                "totTaxblAmt": round(taxbl_amt_b, 2),
+                "totTaxAmt": round(tax_amt_b, 2),
+                "totAmt": round(total_amt, 2),  # Tax-exclusive total
+                "prchrAcptcYn": "N",
+                "remark": credit_note.get("notes", ""),
+                "regrId": "11999",
+                "regrNm": "TestVSDC",
+                "modrId": "45678",
+                "modrNm": "TestVSDC",
+                "receipt": {
+                    "custTin": customer_tin,
+                    "custMblNo": credit_note.get("customer_mobile", "0795577896"),
+                    "rptNo": 1,
+                    "trdeNm": "Maryshop",
+                    "adrs": "KICUKIRO-KABEZA",
+                    "topMsg": "Maryshop",
+                    "btmMsg": "Welcome",
+                    "prchrAcptcYn": "N"
+                },
+                "itemList": item_list
+            }
+            
+            return vsdc_payload
+            
+        except Exception as e:
+            logger.error(f"Error transforming Zoho credit note: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Failed to transform credit note: {str(e)}")
