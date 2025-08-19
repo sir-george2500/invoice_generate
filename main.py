@@ -36,6 +36,8 @@ async def handle_zoho_webhook(request: Request):
         # Get the raw JSON payload
         zoho_payload = await request.json()
         logger.info(f"Received Zoho webhook payload")
+        # log the payload 
+        logger.info(zoho_payload)
         # Transform Zoho payload to VSDC format
         vsdc_payload = payload_transformer.transform_zoho_to_vsdc(zoho_payload)
         logger.info(f"Transformed to VSDC payload for invoice: {vsdc_payload['invcNo']}")
