@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 from typing import Optional, Dict, Any
 import re
-
 from src.invoice_generator import InvoiceGenerator
 from src.models import Invoice, Company, Client, InvoiceItem
 from src.invoice_qrcode import InvoiceQRGenerator
@@ -39,6 +38,65 @@ class VSSDCInvoiceService:
         os.makedirs("output/pdf", exist_ok=True)
         os.makedirs("output/html", exist_ok=True)
 
+    def extract_business_info_from_zoho(self, invoice_data: dict, vsdc_payload: Optional[dict] = None) -> dict:
+        """Extract business information from Zoho custom fields"""
+        try:
+            custom_field_hash = invoice_data.get("custom_field_hash", {})
+            
+            # ✅ Extract business info directly from Zoho custom fields using the exact field names
+            business_name = custom_field_hash.get("cf_organizationname", "")  # "BITS"
+            business_address = custom_field_hash.get("cf_seller_company_address", "")  # "Rwanda, Kigali Sonatube"
+            business_email = custom_field_hash.get("cf_seller_company_email", "")  # "xdelta2500@gmail.com"
+            business_tin = custom_field_hash.get("cf_tin", "")  # "944000008"
+            
+            # Fallback to custom_fields array if custom_field_hash is missing values
+            if not business_name or not business_address or not business_email or not business_tin:
+                for field in invoice_data.get("custom_fields", []):
+                    api_name = field.get("api_name")
+                    value = field.get("value", "")
+                    
+                    if api_name == "cf_organizationname" and not business_name:
+                        business_name = value
+                    elif api_name == "cf_seller_company_address" and not business_address:
+                        business_address = value
+                    elif api_name == "cf_seller_company_email" and not business_email:
+                        business_email = value
+                    elif api_name == "cf_tin" and not business_tin:
+                        business_tin = value
+            
+            # Clean up the values and provide fallbacks
+            business_name = business_name.strip() if business_name else settings.COMPANY_NAME
+            business_address = business_address.strip() if business_address else settings.COMPANY_ADDRESS
+            business_email = business_email.strip() if business_email else settings.COMPANY_EMAIL
+            business_tin = business_tin.strip() if business_tin else settings.COMPANY_TIN
+            
+            logger.info(f"✅ Extracted business info from Zoho custom fields:")
+            logger.info(f"   Organization Name: {business_name}")
+            logger.info(f"   Address: {business_address}")
+            logger.info(f"   Email: {business_email}")
+            logger.info(f"   TIN: {business_tin}")
+            
+            return {
+                "name": business_name,
+                "address": business_address,
+                "tel": settings.COMPANY_TEL,  # You can add cf_seller_company_phone if needed
+                "email": business_email,
+                "tin": business_tin,
+                "cashier": f"admin({business_tin})"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error extracting business info from Zoho custom fields: {str(e)}")
+            # Fallback to settings
+            return {
+                "name": settings.COMPANY_NAME,
+                "address": settings.COMPANY_ADDRESS,
+                "tel": settings.COMPANY_TEL,
+                "email": settings.COMPANY_EMAIL,
+                "tin": settings.COMPANY_TIN,
+                "cashier": f"admin({settings.COMPANY_TIN})"
+            }
+
     def get_tax_rate_from_zoho_item(self, item: dict) -> float:
         """Extract tax rate from Zoho item data"""
         tax_rate = None
@@ -49,21 +107,25 @@ class VSSDCInvoiceService:
                     break
                 except (ValueError, TypeError):
                     continue
+
         if tax_rate is None and 'tax' in item:
             try:
                 if isinstance(item['tax'], (int, float)):
                     tax_rate = float(item['tax'])
             except (ValueError, TypeError):
                 pass
+
         if tax_rate is None:
             tax_category = item.get('tax_category', '').upper()
             if tax_category == 'A':
                 tax_rate = 0.0
             elif tax_category == 'B':
                 tax_rate = 18.0
+
         if tax_rate is None:
             tax_rate = 18.0
             logger.warning(f"No tax rate found for item {item.get('name', 'Unknown')}, defaulting to 18%")
+
         return tax_rate
 
     def calculate_item_totals(self, item: dict) -> dict:
@@ -95,37 +157,53 @@ class VSSDCInvoiceService:
             logger.error(f"Error calculating item totals: {str(e)}")
             raise TaxCalculationError(f"Invalid data in item calculations: {str(e)}")
 
-    def convert_ebm_response_to_invoice_model(self, ebm_response: dict, zoho_data: dict, vsdc_payload: dict) -> Invoice:
+    def convert_ebm_response_to_invoice_model(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Invoice:
         """Convert EBM response, Zoho data, and VSDC payload to Invoice model with proper mapping"""
         try:
             invoice_data = zoho_data.get("invoice", zoho_data)
             logger.debug(f"Converting EBM response: {ebm_response}")
             logger.debug(f"Using Zoho data: {invoice_data}")
             logger.debug(f"Using VSDC payload: {vsdc_payload}")
-
-            # Company information
+            
+            # ✅ FIXED: Extract business information from Zoho custom fields directly
+            business_info = self.extract_business_info_from_zoho(invoice_data, vsdc_payload)
+            
+            # Company information - NOW USING ZOHO CUSTOM FIELDS
             company = Company(
-                name=settings.COMPANY_NAME,
-                address=settings.COMPANY_ADDRESS,
-                tel=settings.COMPANY_TEL,
-                email=settings.COMPANY_EMAIL,
-                tin=str(invoice_data.get("cf_custtin", settings.COMPANY_TIN)),
-                cashier=f"admin({invoice_data.get('cf_custtin', settings.COMPANY_TIN)})"
+                name=business_info["name"],        # ✅ "BITS" from cf_organizationname
+                address=business_info["address"],  # ✅ "Rwanda, Kigali Sonatube" from cf_seller_company_address
+                tel=business_info["tel"],         # ✅ From settings (can be enhanced with cf_seller_company_phone)
+                email=business_info["email"],     # ✅ "xdelta2500@gmail.com" from cf_seller_company_email
+                tin=business_info["tin"],         # ✅ "944000008" from cf_tin
+                cashier=business_info["cashier"]  # ✅ "admin(944000008)"
             )
 
-            # Client information
+            # FIXED: Client information - use customer TIN, not business TIN
+            customer_tin = vsdc_payload.get("custTin", "") if vsdc_payload else ""
+            if not customer_tin:
+                # Fallback to extract from invoice data
+                custom_field_hash = invoice_data.get("custom_field_hash", {})
+                customer_tin = custom_field_hash.get("cf_customer_tin", "")
+                
+                # Additional fallback
+                if not customer_tin:
+                    customer_custom_field_hash = invoice_data.get("customer_custom_field_hash", {})
+                    customer_tin = customer_custom_field_hash.get("cf_custtin", "")
+
             client = Client(
-                name=str(vsdc_payload.get("custNm", invoice_data.get("customer_name", "Unknown Customer"))),
-                tin=str(vsdc_payload.get("custTin", invoice_data.get("cf_custtin", "")))
+                name=str(vsdc_payload.get("custNm", invoice_data.get("customer_name", "Unknown Customer")) if vsdc_payload else invoice_data.get("customer_name", "Unknown Customer")),
+                tin=str(customer_tin)  # ✅ Now using customer TIN, not business TIN
             )
 
             # Convert items
             items = []
             zoho_items = invoice_data.get("line_items", [])
-            vsdc_items = vsdc_payload.get("itemList", [])
+            vsdc_items = vsdc_payload.get("itemList", []) if vsdc_payload else []
+
             for idx, vsdc_item in enumerate(vsdc_items, start=1):
                 zoho_item = zoho_items[idx-1] if idx-1 < len(zoho_items) else {}
                 item_calculations = self.calculate_item_totals(zoho_item)
+
                 item = InvoiceItem(
                     code=str(vsdc_item.get("itemCd", zoho_item.get("item_id", f"RW1NTXU000000{idx:02d}"))),
                     description=str(zoho_item.get("description", vsdc_item.get("itemNm", "Unknown Item"))),
@@ -135,6 +213,21 @@ class VSSDCInvoiceService:
                     total_price=f"{float(vsdc_item.get('splyAmt', item_calculations.get('subtotal', 0))):,.2f}"
                 )
                 items.append(item)
+
+            # If no vsdc_items, use zoho items only
+            if not vsdc_items and zoho_items:
+                for idx, zoho_item in enumerate(zoho_items, start=1):
+                    item_calculations = self.calculate_item_totals(zoho_item)
+                    
+                    item = InvoiceItem(
+                        code=str(zoho_item.get("item_id", f"RW1NTXU000000{idx:02d}")),
+                        description=str(zoho_item.get("description", "Unknown Item")),
+                        quantity=f"{float(zoho_item.get('quantity', 0)):,.2f}",
+                        tax=str(item_calculations.get('tax_category', "B")),
+                        unit_price=f"{item_calculations.get('unit_price_excl_tax', 0):,.2f}",
+                        total_price=f"{item_calculations.get('subtotal', 0):,.2f}"
+                    )
+                    items.append(item)
 
             # Invoice number
             invoice_number = str(ebm_response.get("data", {}).get("rcptNo", ""))
@@ -154,12 +247,14 @@ class VSSDCInvoiceService:
                     invoice_time = parsed_dt.strftime("%H:%M:%S")
                 except ValueError:
                     pass
+
             if not invoice_date:
                 try:
                     parsed_date = datetime.strptime(invoice_data.get("date", ""), "%Y-%m-%d")
                     invoice_date = parsed_date.strftime("%d-%m-%Y")
                 except (ValueError, TypeError):
                     invoice_date = datetime.now().strftime("%d-%m-%Y")
+
             if not invoice_time:
                 invoice_time = datetime.now().strftime("%H:%M:%S")
 
@@ -168,10 +263,11 @@ class VSSDCInvoiceService:
             mrc = str(ebm_response.get("data", {}).get("mrcNo", settings.VSDC_MRC))
             receipt_number = f"{invoice_number}/{invoice_number}NS"
 
-            # Totals
-            total_tax_b = float(vsdc_payload.get("taxAmtB", invoice_data.get("tax_total", 0)))
-            total_b = float(vsdc_payload.get("taxblAmtB", invoice_data.get("sub_total", 0)))
+            # Totals with null safety
+            total_tax_b = float(vsdc_payload.get("taxAmtB", invoice_data.get("tax_total", 0)) if vsdc_payload else invoice_data.get("tax_total", 0))
+            total_b = float(vsdc_payload.get("taxblAmtB", invoice_data.get("sub_total", 0)) if vsdc_payload else invoice_data.get("sub_total", 0))
             total_rwf = total_b  # Tax-exclusive, per PDF
+            
             invoice = Invoice(
                 company=company,
                 client=client,
@@ -183,24 +279,28 @@ class VSSDCInvoiceService:
                 mrc=mrc,
                 items=items,
                 total_rwf=f"{total_rwf:,.2f}",
-                total_aex=f"{vsdc_payload.get('taxblAmtA', 0):,.2f}",
+                total_aex=f"{vsdc_payload.get('taxblAmtA', 0):,.2f}" if vsdc_payload else "0.00",
                 total_b=f"{total_b:,.2f}",
-                total_tax_a=f"{vsdc_payload.get('taxAmtA', 0):,.2f}",
+                total_tax_a=f"{vsdc_payload.get('taxAmtA', 0):,.2f}" if vsdc_payload else "0.00",
                 total_tax_b=f"{total_tax_b:,.2f}",
                 total_tax=f"{total_tax_b:,.2f}"  # Only B tax present
             )
 
+            logger.info(f"✅ Invoice model created - Company: {company.name}, Client: {client.name}, TIN: {company.tin}")
             return invoice
 
         except Exception as e:
             logger.error(f"Error converting to invoice model: {str(e)}")
             raise
 
-    async def generate_advanced_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: dict) -> Dict[str, Any]:
+    async def generate_advanced_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Dict[str, Any]:
         """Generate PDF using the advanced invoice generator"""
         try:
             invoice = self.convert_ebm_response_to_invoice_model(ebm_response, zoho_data, vsdc_payload)
             invoice_data = invoice.to_dict()
+            
+            logger.info(f"✅ Generating PDF with company: {invoice_data.get('company_name')}")
+            
             pdf_filename = f"invoice_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             pdf_path = f"output/pdf/{pdf_filename}"
             self.invoice_generator.generate_pdf_with_qr(
@@ -208,9 +308,11 @@ class VSSDCInvoiceService:
                 pdf_path, 
                 generate_qr=bool(self.qr_generator)
             )
+
             html_filename = f"invoice_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             html_path = f"output/html/{html_filename}"
             self.invoice_generator.generate_html(invoice_data, html_path)
+
             result = {
                 "pdf_path": pdf_path,
                 "pdf_filename": pdf_filename,
@@ -219,16 +321,19 @@ class VSSDCInvoiceService:
                 "invoice_number": invoice.invoice_number,
                 "qr_code_generated": 'qr_code_path' in invoice_data
             }
+
             if 'qr_code_path' in invoice_data:
                 result["qr_code_url"] = invoice_data['qr_code_path']
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
-            logger.info(f"Advanced PDF generated successfully: {pdf_filename}")
+
+            logger.info(f"✅ Advanced PDF generated successfully: {pdf_filename}")
             return result
+
         except Exception as e:
             logger.error(f"Error generating advanced PDF: {str(e)}")
             raise PDFGenerationError(f"Error generating advanced PDF: {str(e)}")
 
-    async def generate_credit_note_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: dict) -> Dict[str, Any]:
+    async def generate_credit_note_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Dict[str, Any]:
         """Generate PDF for credit note (refund)"""
         try:
             # Convert using the same method, but modify some fields to reflect refund
@@ -269,7 +374,7 @@ class VSSDCInvoiceService:
                 result["qr_code_url"] = invoice_data['qr_code_path']
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
             
-            logger.info(f"Credit note PDF generated: {filename_base}.pdf")
+            logger.info(f"✅ Credit note PDF generated: {filename_base}.pdf")
             return result
             
         except Exception as e:
