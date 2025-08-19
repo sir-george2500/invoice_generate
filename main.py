@@ -224,161 +224,226 @@ async def handle_zoho_credit_note_webhook(request: Request):
     try:
         # Get the raw JSON payload
         zoho_payload = await request.json()
-        logger.info(f"Received Zoho credit note webhook payload")
-        # logger.info(f"Zoho credit note payload: {zoho_payload}")
+        logger.info(f"📥 Received Zoho credit note webhook payload")
         
-        # Transform Zoho credit note payload to VSDC format
-        vsdc_payload = payload_transformer.transform_zoho_credit_note_to_vsdc(zoho_payload)
-        logger.info(f"Transformed to VSDC credit note payload for: {vsdc_payload['invcNo']}")
+        # ✅ Enhanced payload structure logging
+        logger.info(f"🔍 Credit note payload structure: {list(zoho_payload.keys())}")
+        
+        # ✅ Enhanced transformation with better error handling
+        try:
+            vsdc_payload = payload_transformer.transform_zoho_credit_note_to_vsdc(zoho_payload)
+            logger.info(f"✅ Transformed to VSDC credit note payload for: {vsdc_payload['invcNo']}")
+        except (IndexError, KeyError, ValueError, TypeError) as transform_error:
+            logger.error(f"❌ Credit note transformation error: {str(transform_error)}")
+            logger.error(f"❌ Zoho payload structure: {list(zoho_payload.keys())}")
+            
+            # Log credit note-specific structure
+            if "creditnote" in zoho_payload:
+                credit_note_data = zoho_payload["creditnote"]
+                logger.error(f"❌ Credit note keys: {list(credit_note_data.keys())}")
+                
+                # Log invoices_credited specifically
+                invoices_credited = credit_note_data.get("invoices_credited", "NOT_FOUND")
+                logger.error(f"❌ invoices_credited: {invoices_credited}")
+                logger.error(f"❌ invoices_credited type: {type(invoices_credited)}")
+                
+                if isinstance(invoices_credited, list):
+                    logger.error(f"❌ invoices_credited length: {len(invoices_credited)}")
+            
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "message": "Failed to transform credit note payload",
+                    "error": str(transform_error),
+                    "error_type": "credit_note_transformation_error",
+                    "payload_keys": list(zoho_payload.keys()),
+                    "document_type": "credit_note"
+                }
+            )
+        except Exception as transform_error:
+            logger.error(f"❌ Unexpected credit note transformation error: {str(transform_error)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "message": "Unexpected error during credit note transformation",
+                    "error": str(transform_error),
+                    "error_type": "internal_transformation_error",
+                    "document_type": "credit_note"
+                }
+            )
         
         # FIXED: Log business information for debugging
         log_business_info(zoho_payload, vsdc_payload, "credit_note")
         
-        # Forward to VSDC API (credit note endpoint)
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                settings.VSDC_API_URL,  # Different endpoint for credit notes
-                json=vsdc_payload,
-                timeout=30.0,
-                headers={"Content-Type": "application/json"}
+        # ✅ Enhanced VSDC API communication with better error handling
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    settings.VSDC_API_URL,  # Same endpoint for credit notes
+                    json=vsdc_payload,
+                    timeout=30.0,
+                    headers={"Content-Type": "application/json"}
+                )
+        except httpx.TimeoutException:
+            logger.error(f"❌ VSDC API timeout for credit note: {vsdc_payload.get('invcNo', 'UNKNOWN')}")
+            return JSONResponse(
+                status_code=504,
+                content={
+                    "message": "VSDC API request timeout",
+                    "credit_note_number": vsdc_payload.get("invcNo", "UNKNOWN"),
+                    "error_type": "vsdc_timeout_error",
+                    "document_type": "credit_note"
+                }
             )
+        except httpx.RequestError as req_error:
+            logger.error(f"❌ VSDC API request error for credit note: {str(req_error)}")
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "message": "Failed to connect to VSDC API",
+                    "credit_note_number": vsdc_payload.get("invcNo", "UNKNOWN"),
+                    "error": str(req_error),
+                    "error_type": "vsdc_connection_error",
+                    "document_type": "credit_note"
+                }
+            )
+        
+        # VSDC always returns HTTP 200, check resultCd in response body
+        if response.status_code == 200:
+            try:
+                ebm_response = response.json()
+            except ValueError as e:
+                logger.error(f"❌ Invalid JSON response from VSDC: {response.text}")
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Invalid JSON response from VSDC API: {str(e)}"
+                )
             
-            # VSDC always returns HTTP 200, check resultCd in response body
-            if response.status_code == 200:
+            # Check VSDC result code (000 means success)
+            result_code = ebm_response.get('resultCd', '999')
+            result_message = ebm_response.get('resultMsg', 'Unknown error')
+            
+            if result_code == '000':
+                # Success case
+                logger.info(f"✅ Credit note successfully processed by VSDC API: {vsdc_payload['invcNo']}")
+                
+                # FIXED: Generate credit note PDF with QR code using corrected business info
                 try:
-                    ebm_response = response.json()
-                except ValueError as e:
-                    logger.error(f"Invalid JSON response from VSDC: {response.text}")
-                    raise HTTPException(
-                        status_code=502,
-                        detail=f"Invalid JSON response from VSDC API: {str(e)}"
+                    # Log what's being passed to PDF generation
+                    credit_note_data = zoho_payload.get("creditnote", zoho_payload)
+                    business_name = vsdc_payload.get("receipt", {}).get("trdeNm", settings.COMPANY_NAME)
+                    logger.info(f"🎯 Generating credit note PDF with business name: {business_name}")
+                    
+                    # ✅ UPDATED: Pass vsdc_payload as Optional[dict] - it can be None
+                    pdf_result = await vsdc_service.generate_credit_note_pdf(
+                        ebm_response=ebm_response, 
+                        zoho_data=zoho_payload, 
+                        vsdc_payload=vsdc_payload  # This is now properly handled as Optional[dict]
                     )
-                
-                # Check VSDC result code (000 means success)
-                result_code = ebm_response.get('resultCd', '999')
-                result_message = ebm_response.get('resultMsg', 'Unknown error')
-                
-                if result_code == '000':
-                    # Success case
-                    logger.info(f"Credit note successfully processed by VSDC API: {vsdc_payload['invcNo']}")
                     
-                    # FIXED: Generate credit note PDF with QR code using corrected business info
-                    try:
-                        # Log what's being passed to PDF generation
-                        credit_note_data = zoho_payload.get("creditnote", zoho_payload)
-                        business_name = vsdc_payload.get("receipt", {}).get("trdeNm", settings.COMPANY_NAME)
-                        logger.info(f"Generating credit note PDF with business name: {business_name}")
-                        
-                        # ✅ UPDATED: Pass vsdc_payload as Optional[dict] - it can be None
-                        pdf_result = await vsdc_service.generate_credit_note_pdf(
-                            ebm_response=ebm_response, 
-                            zoho_data=zoho_payload, 
-                            vsdc_payload=vsdc_payload  # This is now properly handled as Optional[dict]
-                        )
-                        
-                        # Enhanced response with business info
-                        return JSONResponse(
-                            status_code=200,
-                            content={
-                                "message": "Credit note webhook processed successfully with dynamic tax calculation",
-                                "credit_note_number": vsdc_payload["invcNo"],
-                                "business_info": {
-                                    "name": business_name,
-                                    "tin": vsdc_payload.get("tin"),
-                                    "address": vsdc_payload.get("receipt", {}).get("adrs")
-                                },
-                                "vsdc_response": ebm_response,
-                                "pdf_generation": pdf_result,
-                                "download_url": f"/download-pdf/{pdf_result['pdf_filename']}",
-                                "tax_summary": {
-                                    "refund_tax_a": f"{abs(ebm_response.get('taxAmtA', 0)):,.2f}",
-                                    "refund_tax_b": f"{abs(ebm_response.get('taxAmtB', 0)):,.2f}",
-                                    "total_refund_tax": f"{abs(ebm_response.get('totTaxAmt', 0)):,.2f}"
-                                },
-                                "document_type": "credit_note"
-                            }
-                        )
-                        
-                    except Exception as pdf_error:
-                        logger.error(f"Error generating credit note PDF: {str(pdf_error)}")
-                        logger.error(f"Credit Note PDF Error Details: {pdf_error.__class__.__name__}: {str(pdf_error)}")
-                        return JSONResponse(
-                            status_code=200,
-                            content={
-                                "message": "Credit note webhook forwarded successfully but PDF generation failed",
-                                "credit_note_number": vsdc_payload["invcNo"],
-                                "business_info": {
-                                    "name": vsdc_payload.get("receipt", {}).get("trdeNm"),
-                                    "tin": vsdc_payload.get("tin")
-                                },
-                                "vsdc_response": ebm_response,
-                                "pdf_error": str(pdf_error),
-                                "tax_summary": {
-                                    "refund_tax_a": f"{abs(ebm_response.get('taxAmtA', 0)):,.2f}",
-                                    "refund_tax_b": f"{abs(ebm_response.get('taxAmtB', 0)):,.2f}",
-                                    "total_refund_tax": f"{abs(ebm_response.get('totTaxAmt', 0)):,.2f}"
-                                },
-                                "document_type": "credit_note"
-                            }
-                        )
-                else:
-                    # VSDC API returned an error
-                    logger.error(f"VSDC Credit Note API error - Code: {result_code}, Message: {result_message}")
-                    
-                    # Map common VSDC error codes to appropriate HTTP status codes
-                    # Credit notes might have specific error codes
-                    error_mapping = {
-                        '881': 400,  # Purchase is mandatory
-                        '882': 400,  # Purchase code is invalid
-                        '883': 409,  # Purchase already used
-                        '884': 400,  # Invalid customer TIN
-                        '885': 400,  # Original invoice not found (credit note specific)
-                        '886': 409,  # Credit note already exists for this invoice
-                        '901': 401,  # Not valid device
-                        '910': 400,  # Request parameter error
-                        '921': 422,  # Sales data cannot be received
-                        '922': 422,  # Sales invoice data can be received after sales data
-                        '923': 400,  # Invalid refund amount (exceeds original invoice)
-                        '994': 409,  # Overlapped data
-                    }
-                    
-                    http_status = error_mapping.get(result_code, 422)  # Default to 422 for unprocessable entity
-                    
+                    # Enhanced response with business info
                     return JSONResponse(
-                        status_code=http_status,
+                        status_code=200,
                         content={
-                            "message": "VSDC Credit Note API processing failed",
+                            "message": "Credit note webhook processed successfully with dynamic tax calculation",
                             "credit_note_number": vsdc_payload["invcNo"],
-                            "vsdc_error": {
-                                "code": result_code,
-                                "message": result_message,
-                                "full_response": ebm_response
+                            "business_info": {
+                                "name": business_name,
+                                "tin": vsdc_payload.get("tin"),
+                                "address": vsdc_payload.get("receipt", {}).get("adrs")
                             },
-                            "error_type": "vsdc_credit_note_business_logic_error",
+                            "vsdc_response": ebm_response,
+                            "pdf_generation": pdf_result,
+                            "download_url": f"/download-pdf/{pdf_result['pdf_filename']}",
+                            "tax_summary": {
+                                "refund_tax_a": f"{abs(ebm_response.get('taxAmtA', 0)):,.2f}",
+                                "refund_tax_b": f"{abs(ebm_response.get('taxAmtB', 0)):,.2f}",
+                                "total_refund_tax": f"{abs(ebm_response.get('totTaxAmt', 0)):,.2f}"
+                            },
+                            "document_type": "credit_note"
+                        }
+                    )
+                    
+                except Exception as pdf_error:
+                    logger.error(f"❌ Error generating credit note PDF: {str(pdf_error)}")
+                    logger.error(f"❌ Credit Note PDF Error Details: {pdf_error.__class__.__name__}: {str(pdf_error)}")
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "message": "Credit note webhook forwarded successfully but PDF generation failed",
+                            "credit_note_number": vsdc_payload["invcNo"],
+                            "business_info": {
+                                "name": vsdc_payload.get("receipt", {}).get("trdeNm"),
+                                "tin": vsdc_payload.get("tin")
+                            },
+                            "vsdc_response": ebm_response,
+                            "pdf_error": str(pdf_error),
+                            "tax_summary": {
+                                "refund_tax_a": f"{abs(ebm_response.get('taxAmtA', 0)):,.2f}",
+                                "refund_tax_b": f"{abs(ebm_response.get('taxAmtB', 0)):,.2f}",
+                                "total_refund_tax": f"{abs(ebm_response.get('totTaxAmt', 0)):,.2f}"
+                            },
                             "document_type": "credit_note"
                         }
                     )
             else:
-                # HTTP-level error (network, server down, etc.)
-                logger.error(f"HTTP error from VSDC Credit Note API: {response.status_code} - {response.text}")
+                # VSDC API returned an error
+                logger.error(f"❌ VSDC Credit Note API error - Code: {result_code}, Message: {result_message}")
+                
+                # Map common VSDC error codes to appropriate HTTP status codes
+                # Credit notes might have specific error codes
+                error_mapping = {
+                    '881': 400,  # Purchase is mandatory
+                    '882': 400,  # Purchase code is invalid
+                    '883': 409,  # Purchase already used
+                    '884': 400,  # Invalid customer TIN
+                    '885': 400,  # Original invoice not found (credit note specific)
+                    '886': 409,  # Credit note already exists for this invoice
+                    '901': 401,  # Not valid device
+                    '910': 400,  # Request parameter error
+                    '921': 422,  # Sales data cannot be received
+                    '922': 422,  # Sales invoice data can be received after sales data
+                    '923': 400,  # Invalid refund amount (exceeds original invoice)
+                    '994': 409,  # Overlapped data
+                }
+                
+                http_status = error_mapping.get(result_code, 422)  # Default to 422 for unprocessable entity
+                
                 return JSONResponse(
-                    status_code=502,
+                    status_code=http_status,
                     content={
-                        "message": "Failed to communicate with VSDC Credit Note API",
+                        "message": "VSDC Credit Note API processing failed",
                         "credit_note_number": vsdc_payload["invcNo"],
-                        "http_error": {
-                            "status_code": response.status_code,
-                            "response_text": response.text
+                        "vsdc_error": {
+                            "code": result_code,
+                            "message": result_message,
+                            "full_response": ebm_response
                         },
-                        "error_type": "vsdc_credit_note_communication_error",
+                        "error_type": "vsdc_credit_note_business_logic_error",
                         "document_type": "credit_note"
                     }
                 )
-                
+        else:
+            # HTTP-level error (network, server down, etc.)
+            logger.error(f"❌ HTTP error from VSDC Credit Note API: {response.status_code} - {response.text}")
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "message": "Failed to communicate with VSDC Credit Note API",
+                    "credit_note_number": vsdc_payload.get("invcNo", "UNKNOWN"),
+                    "http_error": {
+                        "status_code": response.status_code,
+                        "response_text": response.text
+                    },
+                    "error_type": "vsdc_credit_note_communication_error",
+                    "document_type": "credit_note"
+                }
+            )
+            
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing credit note webhook: {str(e)}")
+        logger.error(f"❌ Error processing credit note webhook: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

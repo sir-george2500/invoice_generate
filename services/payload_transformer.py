@@ -175,7 +175,7 @@ class PayloadTransformer:
             vsdc_payload = {
                 "tin": tin,
                 "bhfId": "00",
-                "invcNo": invoice_no + random.randint(1, 1000),
+                "invcNo": invoice_no,
                 "orgInvcNo": 0,
                 "custTin": cust_tin if cust_tin else None,
                 "prcOrdCd": purchase_code if purchase_code else None,
@@ -373,7 +373,7 @@ class PayloadTransformer:
             vsdc_payload = {
                 "tin": tin,
                 "bhfId": "00",
-                "invcNo": invc_no,
+                "invcNo": f"{invc_no}{random.randint(1000, 9999)}",
                 "orgInvcNo": org_invc_no,
                 "custTin": customer_tin,
                 "prcOrdCd": None,
