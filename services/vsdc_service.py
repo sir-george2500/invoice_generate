@@ -39,9 +39,23 @@ class VSSDCInvoiceService:
         os.makedirs("output/html", exist_ok=True)
 
     def extract_business_info_from_zoho(self, invoice_data: dict, vsdc_payload: Optional[dict] = None) -> dict:
-        """Extract business information from Zoho custom fields"""
+        """Extract business information from Zoho custom fields - Fixed for credit notes"""
         try:
-            custom_field_hash = invoice_data.get("custom_field_hash", {})
+            # ✅ FIXED: Handle both invoice and credit note structures
+            if "creditnote" in invoice_data:
+                # Credit note structure
+                document_data = invoice_data["creditnote"]
+                logger.info("📝 Extracting business info from CREDIT NOTE structure")
+            elif "invoice" in invoice_data:
+                # Invoice structure
+                document_data = invoice_data["invoice"]
+                logger.info("📝 Extracting business info from INVOICE structure")
+            else:
+                # Direct structure (fallback)
+                document_data = invoice_data
+                logger.info("📝 Extracting business info from DIRECT structure")
+            
+            custom_field_hash = document_data.get("custom_field_hash", {})
             
             # ✅ Extract business info directly from Zoho custom fields using the exact field names
             business_name = custom_field_hash.get("cf_organizationname", "")  # "BITS"
@@ -51,7 +65,7 @@ class VSSDCInvoiceService:
             
             # Fallback to custom_fields array if custom_field_hash is missing values
             if not business_name or not business_address or not business_email or not business_tin:
-                for field in invoice_data.get("custom_fields", []):
+                for field in document_data.get("custom_fields", []):
                     api_name = field.get("api_name")
                     value = field.get("value", "")
                     
@@ -70,7 +84,7 @@ class VSSDCInvoiceService:
             business_email = business_email.strip() if business_email else settings.COMPANY_EMAIL
             business_tin = business_tin.strip() if business_tin else settings.COMPANY_TIN
             
-            logger.info(f"✅ Extracted business info from Zoho custom fields:")
+            logger.info(f"✅ Extracted business info:")
             logger.info(f"   Organization Name: {business_name}")
             logger.info(f"   Address: {business_address}")
             logger.info(f"   Email: {business_email}")
@@ -107,25 +121,21 @@ class VSSDCInvoiceService:
                     break
                 except (ValueError, TypeError):
                     continue
-
         if tax_rate is None and 'tax' in item:
             try:
                 if isinstance(item['tax'], (int, float)):
                     tax_rate = float(item['tax'])
             except (ValueError, TypeError):
                 pass
-
         if tax_rate is None:
             tax_category = item.get('tax_category', '').upper()
             if tax_category == 'A':
                 tax_rate = 0.0
             elif tax_category == 'B':
                 tax_rate = 18.0
-
         if tax_rate is None:
             tax_rate = 18.0
             logger.warning(f"No tax rate found for item {item.get('name', 'Unknown')}, defaulting to 18%")
-
         return tax_rate
 
     def calculate_item_totals(self, item: dict) -> dict:
@@ -158,15 +168,24 @@ class VSSDCInvoiceService:
             raise TaxCalculationError(f"Invalid data in item calculations: {str(e)}")
 
     def convert_ebm_response_to_invoice_model(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Invoice:
-        """Convert EBM response, Zoho data, and VSDC payload to Invoice model with proper mapping"""
+        """Convert EBM response, Zoho data, and VSDC payload to Invoice model with proper mapping - Fixed for credit notes"""
         try:
-            invoice_data = zoho_data.get("invoice", zoho_data)
-            logger.debug(f"Converting EBM response: {ebm_response}")
-            logger.debug(f"Using Zoho data: {invoice_data}")
+            # ✅ FIXED: Handle both invoice and credit note structures
+            if "creditnote" in zoho_data:
+                invoice_data = zoho_data["creditnote"]
+                logger.debug(f"Converting EBM response for CREDIT NOTE")
+            elif "invoice" in zoho_data:
+                invoice_data = zoho_data["invoice"]
+                logger.debug(f"Converting EBM response for INVOICE")
+            else:
+                invoice_data = zoho_data
+                logger.debug(f"Converting EBM response for DIRECT structure")
+            
+            logger.debug(f"Using document data: {invoice_data}")
             logger.debug(f"Using VSDC payload: {vsdc_payload}")
             
             # ✅ FIXED: Extract business information from Zoho custom fields directly
-            business_info = self.extract_business_info_from_zoho(invoice_data, vsdc_payload)
+            business_info = self.extract_business_info_from_zoho(zoho_data, vsdc_payload)
             
             # Company information - NOW USING ZOHO CUSTOM FIELDS
             company = Company(
@@ -177,33 +196,64 @@ class VSSDCInvoiceService:
                 tin=business_info["tin"],         # ✅ "944000008" from cf_tin
                 cashier=business_info["cashier"]  # ✅ "admin(944000008)"
             )
-
-            # FIXED: Client information - use customer TIN, not business TIN
+            
+            # ✅ FIXED: Client information - Enhanced client TIN extraction for credit notes
             customer_tin = vsdc_payload.get("custTin", "") if vsdc_payload else ""
+            customer_name = "Unknown Customer"
+            
             if not customer_tin:
-                # Fallback to extract from invoice data
+                # Try multiple fallback sources
                 custom_field_hash = invoice_data.get("custom_field_hash", {})
                 customer_tin = custom_field_hash.get("cf_customer_tin", "")
                 
-                # Additional fallback
+                # Additional fallback for credit notes
                 if not customer_tin:
                     customer_custom_field_hash = invoice_data.get("customer_custom_field_hash", {})
                     customer_tin = customer_custom_field_hash.get("cf_custtin", "")
-
+                
+                # Try customer_custom_fields array
+                if not customer_tin:
+                    for field in invoice_data.get("customer_custom_fields", []):
+                        if field.get("api_name") == "cf_custtin":
+                            customer_tin = field.get("value", "")
+                            break
+                
+                # ✅ NEW: Try custom_fields array for customer TIN
+                if not customer_tin:
+                    for field in invoice_data.get("custom_fields", []):
+                        if field.get("api_name") == "cf_customer_tin":
+                            customer_tin = field.get("value", "")
+                            break
+                
+                # ✅ NEW: For credit notes, try to extract from referenced invoice
+                if not customer_tin and "creditnote" in zoho_data:
+                    # Check if there's referenced invoice data
+                    invoices_credited = invoice_data.get("invoices_credited", [])
+                    if invoices_credited and len(invoices_credited) > 0:
+                        # Try to get customer info from the first credited invoice
+                        logger.info(f"🔍 Trying to extract customer TIN from credited invoice data")
+            
+            # Get customer name
+            if vsdc_payload:
+                customer_name = str(vsdc_payload.get("custNm", invoice_data.get("customer_name", "Unknown Customer")))
+            else:
+                customer_name = str(invoice_data.get("customer_name", "Unknown Customer"))
+            
+            logger.info(f"✅ Client Info - Name: {customer_name}, TIN: {customer_tin}")
+            
             client = Client(
-                name=str(vsdc_payload.get("custNm", invoice_data.get("customer_name", "Unknown Customer")) if vsdc_payload else invoice_data.get("customer_name", "Unknown Customer")),
+                name=customer_name,
                 tin=str(customer_tin)  # ✅ Now using customer TIN, not business TIN
             )
-
+            
             # Convert items
             items = []
             zoho_items = invoice_data.get("line_items", [])
             vsdc_items = vsdc_payload.get("itemList", []) if vsdc_payload else []
-
+            
             for idx, vsdc_item in enumerate(vsdc_items, start=1):
                 zoho_item = zoho_items[idx-1] if idx-1 < len(zoho_items) else {}
                 item_calculations = self.calculate_item_totals(zoho_item)
-
                 item = InvoiceItem(
                     code=str(vsdc_item.get("itemCd", zoho_item.get("item_id", f"RW1NTXU000000{idx:02d}"))),
                     description=str(zoho_item.get("description", vsdc_item.get("itemNm", "Unknown Item"))),
@@ -213,7 +263,7 @@ class VSSDCInvoiceService:
                     total_price=f"{float(vsdc_item.get('splyAmt', item_calculations.get('subtotal', 0))):,.2f}"
                 )
                 items.append(item)
-
+            
             # If no vsdc_items, use zoho items only
             if not vsdc_items and zoho_items:
                 for idx, zoho_item in enumerate(zoho_items, start=1):
@@ -228,14 +278,18 @@ class VSSDCInvoiceService:
                         total_price=f"{item_calculations.get('subtotal', 0):,.2f}"
                     )
                     items.append(item)
-
-            # Invoice number
+            
+            # Invoice number - handle credit note numbers
             invoice_number = str(ebm_response.get("data", {}).get("rcptNo", ""))
             if not invoice_number:
-                invoice_number_raw = str(invoice_data.get("invoice_number", "INV-UNKNOWN"))
+                # ✅ FIXED: Handle both invoice_number and creditnote_number
+                if "creditnote" in zoho_data:
+                    invoice_number_raw = str(invoice_data.get("creditnote_number", invoice_data.get("number", "CN-UNKNOWN")))
+                else:
+                    invoice_number_raw = str(invoice_data.get("invoice_number", "INV-UNKNOWN"))
                 numeric_part = "".join(re.findall(r'\d+', invoice_number_raw))
                 invoice_number = numeric_part if numeric_part else "0"
-
+            
             # Date and time
             invoice_date = ""
             invoice_time = ""
@@ -247,22 +301,20 @@ class VSSDCInvoiceService:
                     invoice_time = parsed_dt.strftime("%H:%M:%S")
                 except ValueError:
                     pass
-
             if not invoice_date:
                 try:
                     parsed_date = datetime.strptime(invoice_data.get("date", ""), "%Y-%m-%d")
                     invoice_date = parsed_date.strftime("%d-%m-%Y")
                 except (ValueError, TypeError):
                     invoice_date = datetime.now().strftime("%d-%m-%Y")
-
             if not invoice_time:
                 invoice_time = datetime.now().strftime("%H:%M:%S")
-
+            
             # SDC information
             sdc_id = str(ebm_response.get("data", {}).get("sdcId", settings.VSDC_SDC_ID))
             mrc = str(ebm_response.get("data", {}).get("mrcNo", settings.VSDC_MRC))
             receipt_number = f"{invoice_number}/{invoice_number}NS"
-
+            
             # Totals with null safety
             total_tax_b = float(vsdc_payload.get("taxAmtB", invoice_data.get("tax_total", 0)) if vsdc_payload else invoice_data.get("tax_total", 0))
             total_b = float(vsdc_payload.get("taxblAmtB", invoice_data.get("sub_total", 0)) if vsdc_payload else invoice_data.get("sub_total", 0))
@@ -285,10 +337,10 @@ class VSSDCInvoiceService:
                 total_tax_b=f"{total_tax_b:,.2f}",
                 total_tax=f"{total_tax_b:,.2f}"  # Only B tax present
             )
-
-            logger.info(f"✅ Invoice model created - Company: {company.name}, Client: {client.name}, TIN: {company.tin}")
+            
+            logger.info(f"✅ Invoice model created - Company: {company.name}, Client: {client.name}, Client TIN: {client.tin}, Company TIN: {company.tin}")
             return invoice
-
+            
         except Exception as e:
             logger.error(f"Error converting to invoice model: {str(e)}")
             raise
@@ -308,11 +360,9 @@ class VSSDCInvoiceService:
                 pdf_path, 
                 generate_qr=bool(self.qr_generator)
             )
-
             html_filename = f"invoice_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             html_path = f"output/html/{html_filename}"
             self.invoice_generator.generate_html(invoice_data, html_path)
-
             result = {
                 "pdf_path": pdf_path,
                 "pdf_filename": pdf_filename,
@@ -321,22 +371,19 @@ class VSSDCInvoiceService:
                 "invoice_number": invoice.invoice_number,
                 "qr_code_generated": 'qr_code_path' in invoice_data
             }
-
             if 'qr_code_path' in invoice_data:
                 result["qr_code_url"] = invoice_data['qr_code_path']
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
-
             logger.info(f"✅ Advanced PDF generated successfully: {pdf_filename}")
             return result
-
         except Exception as e:
             logger.error(f"Error generating advanced PDF: {str(e)}")
             raise PDFGenerationError(f"Error generating advanced PDF: {str(e)}")
 
     async def generate_credit_note_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Dict[str, Any]:
-        """Generate PDF for credit note (refund)"""
+        """Generate PDF for credit note (refund) - Fixed for proper data extraction"""
         try:
-            # Convert using the same method, but modify some fields to reflect refund
+            # ✅ FIXED: Convert using the same method with proper credit note handling
             invoice = self.convert_ebm_response_to_invoice_model(ebm_response, zoho_data, vsdc_payload)
             
             # Adjust totals (display as positive numbers, but note that it's a refund)
@@ -347,6 +394,17 @@ class VSSDCInvoiceService:
             
             invoice_data = invoice.to_dict()
             invoice_data["invoice_type"] = "Credit Note"  # Set it in the dictionary instead
+            
+            # ✅ ADD: Credit note specific fields
+            if "creditnote" in zoho_data:
+                credit_note_data = zoho_data["creditnote"]
+                # Add original invoice reference if available
+                invoices_credited = credit_note_data.get("invoices_credited", [])
+                if invoices_credited and len(invoices_credited) > 0:
+                    invoice_data["original_invoice_number"] = invoices_credited[0].get("invoice_number", "")
+                
+                # Add credit reason if available
+                invoice_data["credit_reason"] = credit_note_data.get("reason", "Product return/refund")
             
             filename_base = f"credit_note_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             pdf_path = f"output/pdf/{filename_base}.pdf"
@@ -375,6 +433,7 @@ class VSSDCInvoiceService:
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
             
             logger.info(f"✅ Credit note PDF generated: {filename_base}.pdf")
+            logger.info(f"✅ Credit note details - Company: {invoice.company.name}, Client: {invoice.client.name}, Client TIN: {invoice.client.tin}")
             return result
             
         except Exception as e:

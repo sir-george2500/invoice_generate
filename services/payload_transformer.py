@@ -300,6 +300,7 @@ class PayloadTransformer:
             tin = custom_field_hash.get("cf_tin")
             customer_tin = custom_field_hash.get("cf_customer_tin")
             
+            purchase_code = custom_field_hash.get("cf_purchase_code")  
             # Fallback to custom_fields array
             if not tin or not customer_tin:
                 custom_fields = credit_note.get("custom_fields", [])
@@ -376,7 +377,7 @@ class PayloadTransformer:
                 "invcNo": f"{invc_no}{random.randint(1000, 9999)}",
                 "orgInvcNo": org_invc_no,
                 "custTin": customer_tin,
-                "prcOrdCd": None,
+                "prcOrdCd": purchase_code,
                 "custNm": customer_name,
                 "salesTyCd": "N",
                 "rcptTyCd": "R",  # Refund receipt

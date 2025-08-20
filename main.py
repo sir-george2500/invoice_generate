@@ -225,6 +225,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
         # Get the raw JSON payload
         zoho_payload = await request.json()
         logger.info(f"📥 Received Zoho credit note webhook payload")
+        # logger.info(zoho_payload)
         
         # ✅ Enhanced payload structure logging
         logger.info(f"🔍 Credit note payload structure: {list(zoho_payload.keys())}")
