@@ -18,6 +18,47 @@ class PayloadTransformer:
         """Calculate tax using the formula: price * 18 / 118"""
         return round(price * 18 / 118, 2)
     
+    def extract_invoice_number_safely(self, invoice_number_raw: str, document_type: str = "invoice") -> int:
+        """Extract invoice number with proper validation and logging"""
+        original_number = str(invoice_number_raw).strip()
+        
+        # Log the original number for audit trail
+        logger.info(f"Extracting {document_type} number from: '{original_number}'")
+        
+        # Try direct conversion first (handles pure numeric strings)
+        if original_number.isdigit():
+            result = int(original_number)
+            logger.info(f"Direct conversion successful: {result}")
+            return result
+        
+        # Extract numeric parts
+        numeric_parts = re.findall(r'\d+', original_number)
+        
+        if numeric_parts:
+            # FIXED: Use the FIRST significant numeric part instead of last
+            # This handles cases like "INV-2024-001" correctly (gets 2024, not 1)
+            primary_number = None
+            
+            for part in numeric_parts:
+                # Skip very short numbers (likely sequence numbers)
+                if len(part) >= 3:  # Minimum 3 digits for a meaningful invoice number
+                    primary_number = int(part)
+                    break
+            
+            # If no significant number found, use the longest numeric part
+            if primary_number is None:
+                longest_part = max(numeric_parts, key=len)
+                primary_number = int(longest_part)
+            
+            logger.info(f"Extracted numeric part: {primary_number} from parts: {numeric_parts}")
+            return primary_number
+        
+        # Fallback to timestamp-based number (but smaller and safer)
+        timestamp_number = int(datetime.now().strftime("%m%d%H%M"))  # 8 digits max
+        logger.warning(f"No numeric parts found in '{original_number}', using timestamp: {timestamp_number}")
+        
+        return timestamp_number
+    
     def validate_required_fields(self, zoho_payload: dict) -> None:
         """Validate required fields from Zoho payload"""
         invoice_data = zoho_payload.get("invoice", zoho_payload)
@@ -74,20 +115,16 @@ class PayloadTransformer:
             # Extract invoice data
             invoice_data = zoho_payload.get("invoice", zoho_payload)
             
-            # Extract numeric invoice number
+            # FIXED: Extract numeric invoice number safely
             invoice_number_raw = str(invoice_data.get("invoice_number")).strip()
-            try:
-                numeric_part = re.findall(r'\d+', invoice_number_raw)
-                if numeric_part:
-                    invoice_no = int(numeric_part[-1])
-                else:
-                    raise ValueError(f"Could not extract numeric part from invoice number: {invoice_number_raw}")
-            except (ValueError, IndexError):
-                try:
-                    invoice_no = int(invoice_number_raw)
-                except ValueError:
-                    invoice_no = int(datetime.now().strftime("%Y%m%d%H%M%S")[-8:])
-                    logger.warning(f"Could not parse invoice number {invoice_number_raw}, using timestamp-based number: {invoice_no}")
+            invoice_no = self.extract_invoice_number_safely(invoice_number_raw, "invoice")
+            
+            # Validate the extracted number is reasonable
+            if invoice_no <= 0:
+                raise ValueError(f"Invalid invoice number extracted: {invoice_no}")
+            if invoice_no > 999999999:  # Limit to 9 digits
+                logger.warning(f"Invoice number {invoice_no} is very large, truncating")
+                invoice_no = int(str(invoice_no)[-9:])  # Take last 9 digits
             
             customer_name = invoice_data.get("customer_name", "Unknown Customer")
             
@@ -137,6 +174,7 @@ class PayloadTransformer:
                 purchase_code = purchase_code.strip()
             
             logger.info(f"Extracted TINs - Business: {tin}, Customer: {cust_tin}, Purchase Code: {purchase_code}")
+            logger.info(f"Final invoice number for VSDC: {invoice_no} (from original: {invoice_number_raw})")
             
             # FIXED: Extract business info from Zoho
             business_name, business_address = self.extract_business_info(invoice_data)
@@ -175,7 +213,7 @@ class PayloadTransformer:
             vsdc_payload = {
                 "tin": tin,
                 "bhfId": "00",
-                "invcNo": invoice_no,
+                "invcNo": invoice_no,  # Now properly extracted
                 "orgInvcNo": 0,
                 "custTin": cust_tin if cust_tin else None,
                 "prcOrdCd": purchase_code if purchase_code else None,
@@ -291,6 +329,31 @@ class PayloadTransformer:
             logger.error(f"Error transforming payload: {str(e)}")
             raise HTTPException(status_code=400, detail=f"Error processing payload: {str(e)}")
 
+    def generate_safe_credit_note_number(self, credit_note_number: str, base_invoice_number: str) -> int:
+        """Generate a safe credit note number without random concatenation"""
+        try:
+            # Extract numeric part from credit note number
+            cn_numeric = ''.join(filter(str.isdigit, credit_note_number))
+            if cn_numeric and len(cn_numeric) >= 3:
+                result = int(cn_numeric)
+                if result <= 999999999:  # Reasonable limit
+                    return result
+            
+            # Fallback: use invoice number with prefix
+            inv_numeric = ''.join(filter(str.isdigit, base_invoice_number))
+            if inv_numeric:
+                # Add 9 prefix to distinguish credit notes from invoices
+                credit_base = f"9{inv_numeric[-8:]}"  # Take last 8 digits of invoice
+                return int(credit_base)
+            
+            # Last resort: timestamp-based with 9 prefix
+            timestamp = datetime.now().strftime("%m%d%H%M")
+            return int(f"9{timestamp}")
+            
+        except (ValueError, TypeError):
+            # Emergency fallback
+            return int(f"9{datetime.now().strftime('%m%d%H%M')}")
+
     def transform_zoho_credit_note_to_vsdc(self, zoho_payload: dict) -> dict:
         try:
             credit_note = zoho_payload.get("creditnote", {})
@@ -325,8 +388,12 @@ class PayloadTransformer:
             items = credit_note.get("line_items", [])
             refund_date = credit_note.get("date", datetime.now().strftime("%Y-%m-%d"))
             
-            invc_no = int(''.join(filter(str.isdigit, credit_note_number)) or random.randint(100000, 999999))
-            org_invc_no = int(''.join(filter(str.isdigit, invoice_number)) or 0)
+            # FIXED: Generate credit note number safely without random concatenation
+            invc_no = self.generate_safe_credit_note_number(credit_note_number, invoice_number)
+            org_invc_no = self.extract_invoice_number_safely(invoice_number, "original_invoice")
+            
+            logger.info(f"Credit note number: {invc_no} (from {credit_note_number})")
+            logger.info(f"Original invoice number: {org_invc_no} (from {invoice_number})")
             
             # Totals
             taxbl_amt_b = 0
@@ -374,7 +441,7 @@ class PayloadTransformer:
             vsdc_payload = {
                 "tin": tin,
                 "bhfId": "00",
-                "invcNo": f"{invc_no}{random.randint(1000, 9999)}",
+                "invcNo": invc_no,  # FIXED: No more random concatenation
                 "orgInvcNo": org_invc_no,
                 "custTin": customer_tin,
                 "prcOrdCd": purchase_code,

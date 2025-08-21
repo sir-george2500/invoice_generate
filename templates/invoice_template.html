@@ -96,6 +96,18 @@
             width: 5cm;
             margin: 5px 0;
         }
+        .vsdc-details {
+            margin-top: 0.5cm;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+        }
+        .vsdc-signature {
+            font-family: monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
         @media print {
             body { margin: 0; }
         }
@@ -168,10 +180,16 @@
             Date : {{ invoice_date }} &nbsp;&nbsp; Time : {{ invoice_time }}<br>
             SDC ID : {{ sdc_id }}<br>
             RECEIPT NUMBER : {{ receipt_number }}<br>
-            Internal Data :<br>
-            RECEIPT NUMBER : {{ invoice_number }}<br>
+            <!-- VSDC Official Receipt Information -->
+            <div class="vsdc-details">
+                <strong>VSDC RECEIPT DETAILS</strong><br>
+                Receipt No: {{ vsdc_receipt_no | default('N/A') }}<br>
+                VSDC Date: {{ vsdc_receipt_date | default('N/A') }}<br>
+                MRC: {{ mrc }}<br>
+                Internal Data: {{ vsdc_internal_data | default('N/A') }}<br>
+                Receipt Signature: <span class="vsdc-signature">{{ vsdc_receipt_signature | default('N/A') }}</span>
+            </div>
             Date : {{ invoice_date }} &nbsp;&nbsp; Time : {{ invoice_time }}<br>
-            MRC : {{ mrc }}<br>
             Powered by EBM v2
             
             <div class="qr-placeholder">

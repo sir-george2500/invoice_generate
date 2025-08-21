@@ -1,15 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
-from datetime import datetime
-
-@dataclass
-class InvoiceItem:
-    code: str
-    description: str
-    quantity: str
-    tax: str
-    unit_price: str
-    total_price: str
+from typing import List
 
 @dataclass
 class Company:
@@ -19,13 +9,20 @@ class Company:
     email: str
     tin: str
     cashier: str
-    logo_path: str = "somelogo.png"
 
 @dataclass
 class Client:
     name: str
     tin: str
 
+@dataclass
+class InvoiceItem:
+    code: str
+    description: str
+    quantity: str
+    tax: str
+    unit_price: str
+    total_price: str
 
 @dataclass
 class Invoice:
@@ -41,14 +38,16 @@ class Invoice:
     total_rwf: str
     total_aex: str
     total_b: str
-    total_tax_a: str  # Added this field
+    total_tax_a: str
     total_tax_b: str
     total_tax: str
-    rwanda_seal_path: str = "seaRR.png"
-    qr_code_path: Optional[str] = None
+    vsdc_receipt_no: str = ""
+    vsdc_total_receipt_no: str = ""
+    vsdc_internal_data: str = ""
+    vsdc_receipt_signature: str = ""
+    vsdc_receipt_date: str = ""
     
     def to_dict(self):
-        """Convert to dictionary for template rendering"""
         return {
             'company_name': self.company.name,
             'company_address': self.company.address,
@@ -56,7 +55,6 @@ class Invoice:
             'company_email': self.company.email,
             'company_tin': self.company.tin,
             'cashier': self.company.cashier,
-            'company_logo_path': self.company.logo_path,
             'client_name': self.client.name,
             'client_tin': self.client.tin,
             'invoice_number': self.invoice_number,
@@ -65,22 +63,16 @@ class Invoice:
             'sdc_id': self.sdc_id,
             'receipt_number': self.receipt_number,
             'mrc': self.mrc,
-            'items': [
-                {
-                    'code': item.code,
-                    'description': item.description,
-                    'quantity': item.quantity,
-                    'tax': item.tax,
-                    'unit_price': item.unit_price,
-                    'total_price': item.total_price
-                } for item in self.items
-            ],
+            'items': self.items,
             'total_rwf': self.total_rwf,
             'total_aex': self.total_aex,
             'total_b': self.total_b,
-            'total_tax_a': self.total_tax_a,  # Added this to the dictionary
+            'total_tax_a': self.total_tax_a,
             'total_tax_b': self.total_tax_b,
             'total_tax': self.total_tax,
-            'rwanda_seal_path': self.rwanda_seal_path,
-            'qr_code_path': self.qr_code_path
+            'vsdc_receipt_no': self.vsdc_receipt_no,
+            'vsdc_total_receipt_no': self.vsdc_total_receipt_no,
+            'vsdc_internal_data': self.vsdc_internal_data,
+            'vsdc_receipt_signature': self.vsdc_receipt_signature,
+            'vsdc_receipt_date': self.vsdc_receipt_date
         }

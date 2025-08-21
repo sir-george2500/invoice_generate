@@ -38,30 +38,95 @@ class VSSDCInvoiceService:
         os.makedirs("output/pdf", exist_ok=True)
         os.makedirs("output/html", exist_ok=True)
 
+    def extract_receipt_number_safely(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> str:
+        """Extract receipt number with proper validation and audit trail"""
+        try:
+            # Priority 1: Use VSDC receipt number from EBM response (most authoritative)
+            vsdc_receipt = ebm_response.get("data", {}).get("rcptNo", "")
+            if vsdc_receipt and str(vsdc_receipt).strip():
+                final_receipt = str(vsdc_receipt).strip()
+                logger.info(f"Using VSDC receipt number: {final_receipt}")
+                return final_receipt
+            
+            # Priority 2: Use invoice number from VSDC payload (already processed)
+            if vsdc_payload and vsdc_payload.get("invcNo"):
+                vsdc_invoice_no = str(vsdc_payload["invcNo"])
+                logger.info(f"Using VSDC invoice number: {vsdc_invoice_no}")
+                return vsdc_invoice_no
+            
+            # Priority 3: Extract from original Zoho data (preserve original format)
+            if "creditnote" in zoho_data:
+                document_data = zoho_data["creditnote"]
+                original_number = document_data.get("creditnote_number", document_data.get("number", ""))
+            elif "invoice" in zoho_data:
+                document_data = zoho_data["invoice"]
+                original_number = document_data.get("invoice_number", "")
+            else:
+                document_data = zoho_data
+                original_number = document_data.get("invoice_number", document_data.get("creditnote_number", ""))
+            
+            if original_number and str(original_number).strip():
+                cleaned_number = str(original_number).strip()
+                logger.info(f"Using original Zoho number: {cleaned_number}")
+                return cleaned_number
+            
+            # Fallback: Generate safe receipt number
+            fallback_number = f"RCP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            logger.warning(f"No valid receipt number found, using fallback: {fallback_number}")
+            return fallback_number
+            
+        except Exception as e:
+            logger.error(f"Error extracting receipt number: {str(e)}")
+            emergency_fallback = f"ERR-{datetime.now().strftime('%m%d%H%M%S')}"
+            logger.error(f"Using emergency fallback: {emergency_fallback}")
+            return emergency_fallback
+
+    def generate_safe_receipt_number_format(self, base_number: str) -> str:
+        """Generate receipt number in proper format without duplication"""
+        try:
+            # Clean the base number
+            base_clean = str(base_number).strip()
+            
+            # Don't duplicate if it already has proper format
+            if "/" in base_clean and base_clean.endswith("NS"):
+                logger.info(f"Receipt number already in proper format: {base_clean}")
+                return base_clean
+            
+            # For simple numbers, use standard format
+            if base_clean.isdigit():
+                formatted = f"{base_clean}/001NS"
+                logger.info(f"Formatted numeric receipt: {base_clean} -> {formatted}")
+                return formatted
+            
+            # For complex formats, keep as-is to avoid corruption
+            logger.info(f"Preserving original receipt format: {base_clean}")
+            return base_clean
+            
+        except Exception as e:
+            logger.error(f"Error formatting receipt number: {str(e)}")
+            return str(base_number)
+
     def extract_business_info_from_zoho(self, invoice_data: dict, vsdc_payload: Optional[dict] = None) -> dict:
         """Extract business information from Zoho custom fields - Fixed for credit notes"""
         try:
-            # ✅ FIXED: Handle both invoice and credit note structures
+            # Handle both invoice and credit note structures
             if "creditnote" in invoice_data:
-                # Credit note structure
                 document_data = invoice_data["creditnote"]
-                logger.info("📝 Extracting business info from CREDIT NOTE structure")
+                logger.info("Extracting business info from CREDIT NOTE structure")
             elif "invoice" in invoice_data:
-                # Invoice structure
                 document_data = invoice_data["invoice"]
-                logger.info("📝 Extracting business info from INVOICE structure")
+                logger.info("Extracting business info from INVOICE structure")
             else:
-                # Direct structure (fallback)
                 document_data = invoice_data
-                logger.info("📝 Extracting business info from DIRECT structure")
+                logger.info("Extracting business info from DIRECT structure")
             
             custom_field_hash = document_data.get("custom_field_hash", {})
             
-            # ✅ Extract business info directly from Zoho custom fields using the exact field names
-            business_name = custom_field_hash.get("cf_organizationname", "")  # "BITS"
-            business_address = custom_field_hash.get("cf_seller_company_address", "")  # "Rwanda, Kigali Sonatube"
-            business_email = custom_field_hash.get("cf_seller_company_email", "")  # "xdelta2500@gmail.com"
-            business_tin = custom_field_hash.get("cf_tin", "")  # "944000008"
+            # Extract business info directly from Zoho custom fields using the exact field names
+            business_name = custom_field_hash.get("cf_organizationname", "")
+            business_address = custom_field_hash.get("cf_seller_company_address", "")
+            business_email = custom_field_hash.get("cf_seller_company_email", "")
+            business_tin = custom_field_hash.get("cf_tin", "")
             
             # Fallback to custom_fields array if custom_field_hash is missing values
             if not business_name or not business_address or not business_email or not business_tin:
@@ -84,7 +149,7 @@ class VSSDCInvoiceService:
             business_email = business_email.strip() if business_email else settings.COMPANY_EMAIL
             business_tin = business_tin.strip() if business_tin else settings.COMPANY_TIN
             
-            logger.info(f"✅ Extracted business info:")
+            logger.info(f"Extracted business info:")
             logger.info(f"   Organization Name: {business_name}")
             logger.info(f"   Address: {business_address}")
             logger.info(f"   Email: {business_email}")
@@ -93,7 +158,7 @@ class VSSDCInvoiceService:
             return {
                 "name": business_name,
                 "address": business_address,
-                "tel": settings.COMPANY_TEL,  # You can add cf_seller_company_phone if needed
+                "tel": settings.COMPANY_TEL,
                 "email": business_email,
                 "tin": business_tin,
                 "cashier": f"admin({business_tin})"
@@ -168,9 +233,9 @@ class VSSDCInvoiceService:
             raise TaxCalculationError(f"Invalid data in item calculations: {str(e)}")
 
     def convert_ebm_response_to_invoice_model(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Invoice:
-        """Convert EBM response, Zoho data, and VSDC payload to Invoice model with proper mapping - Fixed for credit notes"""
+        """Convert EBM response, Zoho data, and VSDC payload to Invoice model with proper mapping"""
         try:
-            # ✅ FIXED: Handle both invoice and credit note structures
+            # Handle both invoice and credit note structures
             if "creditnote" in zoho_data:
                 invoice_data = zoho_data["creditnote"]
                 logger.debug(f"Converting EBM response for CREDIT NOTE")
@@ -184,20 +249,20 @@ class VSSDCInvoiceService:
             logger.debug(f"Using document data: {invoice_data}")
             logger.debug(f"Using VSDC payload: {vsdc_payload}")
             
-            # ✅ FIXED: Extract business information from Zoho custom fields directly
+            # Extract business information from Zoho custom fields directly
             business_info = self.extract_business_info_from_zoho(zoho_data, vsdc_payload)
             
-            # Company information - NOW USING ZOHO CUSTOM FIELDS
+            # Company information
             company = Company(
-                name=business_info["name"],        # ✅ "BITS" from cf_organizationname
-                address=business_info["address"],  # ✅ "Rwanda, Kigali Sonatube" from cf_seller_company_address
-                tel=business_info["tel"],         # ✅ From settings (can be enhanced with cf_seller_company_phone)
-                email=business_info["email"],     # ✅ "xdelta2500@gmail.com" from cf_seller_company_email
-                tin=business_info["tin"],         # ✅ "944000008" from cf_tin
-                cashier=business_info["cashier"]  # ✅ "admin(944000008)"
+                name=business_info["name"],
+                address=business_info["address"],
+                tel=business_info["tel"],
+                email=business_info["email"],
+                tin=business_info["tin"],
+                cashier=business_info["cashier"]
             )
             
-            # ✅ FIXED: Client information - Enhanced client TIN extraction for credit notes
+            # Client information
             customer_tin = vsdc_payload.get("custTin", "") if vsdc_payload else ""
             customer_name = "Unknown Customer"
             
@@ -218,20 +283,18 @@ class VSSDCInvoiceService:
                             customer_tin = field.get("value", "")
                             break
                 
-                # ✅ NEW: Try custom_fields array for customer TIN
+                # Try custom_fields array for customer TIN
                 if not customer_tin:
                     for field in invoice_data.get("custom_fields", []):
                         if field.get("api_name") == "cf_customer_tin":
                             customer_tin = field.get("value", "")
                             break
                 
-                # ✅ NEW: For credit notes, try to extract from referenced invoice
+                # For credit notes, try to extract from referenced invoice
                 if not customer_tin and "creditnote" in zoho_data:
-                    # Check if there's referenced invoice data
                     invoices_credited = invoice_data.get("invoices_credited", [])
                     if invoices_credited and len(invoices_credited) > 0:
-                        # Try to get customer info from the first credited invoice
-                        logger.info(f"🔍 Trying to extract customer TIN from credited invoice data")
+                        logger.info(f"Trying to extract customer TIN from credited invoice data")
             
             # Get customer name
             if vsdc_payload:
@@ -239,11 +302,11 @@ class VSSDCInvoiceService:
             else:
                 customer_name = str(invoice_data.get("customer_name", "Unknown Customer"))
             
-            logger.info(f"✅ Client Info - Name: {customer_name}, TIN: {customer_tin}")
+            logger.info(f"Client Info - Name: {customer_name}, TIN: {customer_tin}")
             
             client = Client(
                 name=customer_name,
-                tin=str(customer_tin)  # ✅ Now using customer TIN, not business TIN
+                tin=str(customer_tin)
             )
             
             # Convert items
@@ -279,16 +342,27 @@ class VSSDCInvoiceService:
                     )
                     items.append(item)
             
-            # Invoice number - handle credit note numbers
-            invoice_number = str(ebm_response.get("data", {}).get("rcptNo", ""))
-            if not invoice_number:
-                # ✅ FIXED: Handle both invoice_number and creditnote_number
-                if "creditnote" in zoho_data:
-                    invoice_number_raw = str(invoice_data.get("creditnote_number", invoice_data.get("number", "CN-UNKNOWN")))
-                else:
-                    invoice_number_raw = str(invoice_data.get("invoice_number", "INV-UNKNOWN"))
-                numeric_part = "".join(re.findall(r'\d+', invoice_number_raw))
-                invoice_number = numeric_part if numeric_part else "0"
+            # Safe invoice number extraction with audit trail
+            invoice_number = self.extract_receipt_number_safely(ebm_response, zoho_data, vsdc_payload)
+            
+            logger.info(f"Final invoice number for PDF: {invoice_number}")
+            
+            # Extract VSDC data fields
+            vsdc_data = ebm_response.get("data", {})
+            vsdc_receipt_no = str(vsdc_data.get("rcptNo", ""))
+            vsdc_total_receipt_no = str(vsdc_data.get("totRcptNo", ""))
+            vsdc_internal_data = str(vsdc_data.get("intrlData", ""))
+            vsdc_receipt_signature = str(vsdc_data.get("rcptSign", ""))
+            vsdc_receipt_date_raw = str(vsdc_data.get("vsdcRcptPbctDate", ""))
+            
+            # Format VSDC receipt date
+            vsdc_receipt_date = ""
+            if vsdc_receipt_date_raw and len(vsdc_receipt_date_raw) >= 14:
+                try:
+                    parsed_dt = datetime.strptime(vsdc_receipt_date_raw, "%Y%m%d%H%M%S")
+                    vsdc_receipt_date = parsed_dt.strftime("%d-%m-%Y %H:%M:%S")
+                except ValueError:
+                    vsdc_receipt_date = vsdc_receipt_date_raw
             
             # Date and time
             invoice_date = ""
@@ -313,7 +387,9 @@ class VSSDCInvoiceService:
             # SDC information
             sdc_id = str(ebm_response.get("data", {}).get("sdcId", settings.VSDC_SDC_ID))
             mrc = str(ebm_response.get("data", {}).get("mrcNo", settings.VSDC_MRC))
-            receipt_number = f"{invoice_number}/{invoice_number}NS"
+            
+            # Safe receipt number formatting
+            receipt_number = self.generate_safe_receipt_number_format(invoice_number)
             
             # Totals with null safety
             total_tax_b = float(vsdc_payload.get("taxAmtB", invoice_data.get("tax_total", 0)) if vsdc_payload else invoice_data.get("tax_total", 0))
@@ -335,10 +411,16 @@ class VSSDCInvoiceService:
                 total_b=f"{total_b:,.2f}",
                 total_tax_a=f"{vsdc_payload.get('taxAmtA', 0):,.2f}" if vsdc_payload else "0.00",
                 total_tax_b=f"{total_tax_b:,.2f}",
-                total_tax=f"{total_tax_b:,.2f}"  # Only B tax present
+                total_tax=f"{total_tax_b:,.2f}",
+                vsdc_receipt_no=vsdc_receipt_no,
+                vsdc_total_receipt_no=vsdc_total_receipt_no,
+                vsdc_internal_data=vsdc_internal_data,
+                vsdc_receipt_signature=vsdc_receipt_signature,
+                vsdc_receipt_date=vsdc_receipt_date
             )
             
-            logger.info(f"✅ Invoice model created - Company: {company.name}, Client: {client.name}, Client TIN: {client.tin}, Company TIN: {company.tin}")
+            logger.info(f"Invoice model created - Company: {company.name}, Client: {client.name}, Client TIN: {client.tin}, Company TIN: {company.tin}")
+            logger.info(f"Receipt details - Invoice Number: {invoice.invoice_number}, Receipt Number: {invoice.receipt_number}")
             return invoice
             
         except Exception as e:
@@ -351,7 +433,7 @@ class VSSDCInvoiceService:
             invoice = self.convert_ebm_response_to_invoice_model(ebm_response, zoho_data, vsdc_payload)
             invoice_data = invoice.to_dict()
             
-            logger.info(f"✅ Generating PDF with company: {invoice_data.get('company_name')}")
+            logger.info(f"Generating PDF with company: {invoice_data.get('company_name')}")
             
             pdf_filename = f"invoice_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             pdf_path = f"output/pdf/{pdf_filename}"
@@ -374,7 +456,7 @@ class VSSDCInvoiceService:
             if 'qr_code_path' in invoice_data:
                 result["qr_code_url"] = invoice_data['qr_code_path']
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
-            logger.info(f"✅ Advanced PDF generated successfully: {pdf_filename}")
+            logger.info(f"Advanced PDF generated successfully: {pdf_filename}")
             return result
         except Exception as e:
             logger.error(f"Error generating advanced PDF: {str(e)}")
@@ -383,7 +465,7 @@ class VSSDCInvoiceService:
     async def generate_credit_note_pdf(self, ebm_response: dict, zoho_data: dict, vsdc_payload: Optional[dict] = None) -> Dict[str, Any]:
         """Generate PDF for credit note (refund) - Fixed for proper data extraction"""
         try:
-            # ✅ FIXED: Convert using the same method with proper credit note handling
+            # Convert using the same method with proper credit note handling
             invoice = self.convert_ebm_response_to_invoice_model(ebm_response, zoho_data, vsdc_payload)
             
             # Adjust totals (display as positive numbers, but note that it's a refund)
@@ -393,9 +475,9 @@ class VSSDCInvoiceService:
             invoice.total_tax = f"{abs(float(invoice.total_tax.replace(',', ''))):,.2f}"
             
             invoice_data = invoice.to_dict()
-            invoice_data["invoice_type"] = "Credit Note"  # Set it in the dictionary instead
+            invoice_data["invoice_type"] = "Credit Note"
             
-            # ✅ ADD: Credit note specific fields
+            # Add credit note specific fields
             if "creditnote" in zoho_data:
                 credit_note_data = zoho_data["creditnote"]
                 # Add original invoice reference if available
@@ -432,8 +514,8 @@ class VSSDCInvoiceService:
                 result["qr_code_url"] = invoice_data['qr_code_path']
                 result["qr_public_id"] = invoice_data.get('qr_public_id')
             
-            logger.info(f"✅ Credit note PDF generated: {filename_base}.pdf")
-            logger.info(f"✅ Credit note details - Company: {invoice.company.name}, Client: {invoice.client.name}, Client TIN: {invoice.client.tin}")
+            logger.info(f"Credit note PDF generated: {filename_base}.pdf")
+            logger.info(f"Credit note details - Company: {invoice.company.name}, Client: {invoice.client.name}, Client TIN: {invoice.client.tin}")
             return result
             
         except Exception as e:

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Credit Note 60</title>
+    <title>Invoice 74</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,22 +36,8 @@
             display: inline-block;
             margin-top: 1cm;
         }
-        .credit-note-box {
-            border: 2px solid red;
-            background-color: #ffe6e6;
-            padding: 10px;
-            display: inline-block;
-            margin-top: 1cm;
-        }
         .invoice-to {
             border: 1px solid black;
-            padding: 10px;
-            display: inline-block;
-            margin: 1cm 0;
-        }
-        .credit-note-to {
-            border: 2px solid red;
-            background-color: #ffe6e6;
             padding: 10px;
             display: inline-block;
             margin: 1cm 0;
@@ -73,10 +59,6 @@
         .items-table td:nth-child(5), 
         .items-table td:nth-child(6) {
             text-align: right;
-        }
-        .credit-note-table th {
-            background-color: #ffe6e6;
-            color: #d32f2f;
         }
         .footer {
             display: flex;
@@ -100,14 +82,6 @@
         .totals-table td:last-child {
             text-align: right;
         }
-        .credit-totals {
-            background-color: #ffe6e6;
-            border: 2px solid red;
-        }
-        .credit-totals td {
-            color: #d32f2f;
-            font-weight: bold;
-        }
         .qr-placeholder {
             border: 1px solid black;
             width: 3cm;
@@ -122,13 +96,6 @@
             width: 5cm;
             margin: 5px 0;
         }
-        .original-invoice {
-            background-color: #f0f0f0;
-            padding: 8px;
-            margin: 0.5cm 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
         @media print {
             body { margin: 0; }
         }
@@ -141,10 +108,10 @@
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
             
             <div style="margin-top: 0.5cm;">
-                <strong style="font-size: 14pt;">KABISA ELECTRIC Ltd</strong><br>
+                <strong style="font-size: 14pt;">BITS</strong><br>
                 Rwanda, Kigali Sonatube<br>
                 TEL: 0785757324<br>
-                EMAIL: finance@gokabisa.com<br>
+                EMAIL: xdelta2500@gmail.com<br>
                 TIN: 944000008<br>
                 CASHIER: admin(944000008)
             </div>
@@ -153,34 +120,22 @@
         <div class="invoice-info">
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
             
-            
-            <div class="credit-note-box">
-                <strong style="color: #d32f2f;">CREDIT NOTE NO : 60</strong><br><br>
-                Date : 19-08-2025
+            <div class="invoice-box" style="margin-top: 1cm;">
+                <strong>INVOICE NO : 74</strong><br><br>
+                Date : 21-08-2025
             </div>
-            
         </div>
     </div>
 
-    <!-- Original Invoice Reference (for Credit Notes) -->
-    
-    <div class="original-invoice">
-        <strong>REFUND FOR ORIGINAL INVOICE:</strong> INV-000009<br>
-        <strong>REASON:</strong> Product return/refund
-    </div>
-    
-
-    <!-- Invoice/Credit Note To -->
-    
-    <div class="credit-note-to">
-        <strong>CREDIT NOTE TO</strong><br>
-        TIN : <br>
+    <!-- Invoice To -->
+    <div class="invoice-to">
+        <strong>INVOICE TO</strong><br>
+        TIN : 998000003<br>
         Name : Roviagate
     </div>
-    
 
     <!-- Items Table -->
-    <table class="items-table credit-note-table">
+    <table class="items-table">
         <thead>
             <tr>
                 <th>Item Code</th>
@@ -188,7 +143,7 @@
                 <th>Qty</th>
                 <th>Tax</th>
                 <th>Unit Price</th>
-                <th>Refund Amount</th>
+                <th>Total Price</th>
             </tr>
         </thead>
         <tbody>
@@ -211,15 +166,6 @@
                 <td>500,000.00</td>
             </tr>
             
-            <tr>
-                <td>6958226000000093344</td>
-                <td>Bluetooth wireless optical mouse</td>
-                <td>1.00</td>
-                <td>B</td>
-                <td>25,000.00</td>
-                <td>25,000.00</td>
-            </tr>
-            
         </tbody>
     </table>
 
@@ -228,27 +174,27 @@
         <div class="sdc-info">
             <strong>SDC INFORMATION</strong><br>
             <div class="underline"></div>
-            Date : 19-08-2025 &nbsp;&nbsp; Time : 09:03:26<br>
+            Date : 21-08-2025 &nbsp;&nbsp; Time : 11:21:33<br>
             SDC ID : SDC010013744<br>
-            RECEIPT NUMBER : 60/60NS<br>
+            RECEIPT NUMBER : 74/001NS<br>
             Internal Data :<br>
-            RECEIPT NUMBER : 60<br>
-            Date : 19-08-2025 &nbsp;&nbsp; Time : 09:03:26<br>
+            RECEIPT NUMBER : 74<br>
+            Date : 21-08-2025 &nbsp;&nbsp; Time : 11:21:33<br>
             MRC : WIS00004019<br>
             Powered by EBM v2
             
             <div class="qr-placeholder">
                 
-                <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1755587008/invoice_qr_codes/invoice_qr_codes/invoice_60_qr.png" alt="QR Code" style="max-width: 100%; max-height: 100%;">
+                <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1755768096/invoice_qr_codes/invoice_qr_codes/invoice_74_qr.png" alt="QR Code" style="max-width: 100%; max-height: 100%;">
                 
             </div>
         </div>
         
         <div class="totals-table">
-            <table class="credit-totals">
+            <table>
                 <tr>
-                    <td><strong>Refund Total Rwf</strong></td>
-                    <td>925,000.00</td>
+                    <td><strong>Total Rwf</strong></td>
+                    <td>900,000.00</td>
                 </tr>
                 <tr>
                     <td><strong>Total A-EX Rwf</strong></td>
@@ -256,15 +202,15 @@
                 </tr>
                 <tr>
                     <td><strong>Total B-18% Rwf</strong></td>
-                    <td>925,000.00</td>
+                    <td>900,000.00</td>
                 </tr>
                 <tr>
-                    <td><strong>Refund Tax B Rwf</strong></td>
-                    <td>141,101.70</td>
+                    <td><strong>Total Tax B Rwf</strong></td>
+                    <td>137,288.14</td>
                 </tr>
                 <tr>
-                    <td><strong>Total Refund Tax Rwf</strong></td>
-                    <td>141,101.70</td>
+                    <td><strong>Total Tax Rwf</strong></td>
+                    <td>137,288.14</td>
                 </tr>
             </table>
         </div>

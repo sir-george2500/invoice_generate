@@ -31,6 +31,63 @@ pdf_service = PDFService()
 vsdc_service = VSSDCInvoiceService(settings.cloudinary_config)
 payload_transformer = PayloadTransformer(vsdc_service)
 
+def log_vsdc_response_detailed(ebm_response: dict, document_type: str = "invoice"):
+    """Log VSDC response in detail for debugging receipt numbers"""
+    try:
+        logger.info(f"=== VSDC RESPONSE ANALYSIS ({document_type.upper()}) ===")
+        
+        # Log the full response structure
+        logger.info(f"Full VSDC Response: {json.dumps(ebm_response, indent=2)}")
+        
+        # Extract key fields
+        result_code = ebm_response.get('resultCd', 'MISSING')
+        result_message = ebm_response.get('resultMsg', 'MISSING')
+        
+        logger.info(f"Result Code: {result_code}")
+        logger.info(f"Result Message: {result_message}")
+        
+        # Extract data section
+        data_section = ebm_response.get('data', {})
+        if data_section:
+            logger.info(f"Data Section Present: Yes")
+            logger.info(f"Data Section: {json.dumps(data_section, indent=2)}")
+            
+            # Key receipt fields
+            rcpt_no = data_section.get('rcptNo', 'MISSING')
+            sdc_id = data_section.get('sdcId', 'MISSING')
+            mrc_no = data_section.get('mrcNo', 'MISSING')
+            vsdc_date = data_section.get('vsdcRcptPbctDate', 'MISSING')
+            
+            logger.info(f"Receipt Number (rcptNo): {rcpt_no}")
+            logger.info(f"SDC ID: {sdc_id}")
+            logger.info(f"MRC Number: {mrc_no}")
+            logger.info(f"VSDC Receipt Date: {vsdc_date}")
+            
+            # Check if receipt number is valid
+            if rcpt_no and str(rcpt_no).strip() and rcpt_no != 'MISSING':
+                logger.info(f"Receipt Number Status: VALID")
+                logger.info(f"Receipt Number Type: {type(rcpt_no)}")
+                logger.info(f"Receipt Number Length: {len(str(rcpt_no))}")
+            else:
+                logger.warning(f"Receipt Number Status: INVALID OR MISSING")
+        else:
+            logger.warning(f"Data Section Present: No")
+            logger.warning(f"This is unusual for a successful VSDC response")
+        
+        # Tax information
+        tax_amt_a = ebm_response.get('taxAmtA', 'N/A')
+        tax_amt_b = ebm_response.get('taxAmtB', 'N/A')
+        tot_tax_amt = ebm_response.get('totTaxAmt', 'N/A')
+        
+        logger.info(f"Tax Amount A: {tax_amt_a}")
+        logger.info(f"Tax Amount B: {tax_amt_b}")
+        logger.info(f"Total Tax Amount: {tot_tax_amt}")
+        
+        logger.info(f"=======================================")
+        
+    except Exception as e:
+        logger.error(f"Error logging VSDC response: {str(e)}")
+
 def log_business_info(zoho_payload: dict, vsdc_payload: dict, document_type: str = "invoice"):
     """Helper function to log business information for debugging"""
     try:
@@ -63,13 +120,13 @@ async def handle_zoho_webhook(request: Request):
         zoho_payload = await request.json()
         logger.info(f"Received Zoho webhook payload")
         # log the payload 
-        logger.info(zoho_payload)
+        # logger.info(zoho_payload)
         
         # Transform Zoho payload to VSDC format
         vsdc_payload = payload_transformer.transform_zoho_to_vsdc(zoho_payload)
         logger.info(f"Transformed to VSDC payload for invoice: {vsdc_payload['invcNo']}")
         
-        # FIXED: Log business information for debugging
+        # Log business information for debugging
         log_business_info(zoho_payload, vsdc_payload, "invoice")
         
         # Forward to VSDC API
@@ -85,6 +142,10 @@ async def handle_zoho_webhook(request: Request):
             if response.status_code == 200:
                 try:
                     ebm_response = response.json()
+                    
+                    # ADD: Detailed VSDC response logging
+                    log_vsdc_response_detailed(ebm_response, "invoice")
+                    
                 except ValueError as e:
                     logger.error(f"Invalid JSON response from VSDC: {response.text}")
                     raise HTTPException(
@@ -100,18 +161,17 @@ async def handle_zoho_webhook(request: Request):
                     # Success case
                     logger.info(f"Successfully processed by VSDC API: {vsdc_payload['invcNo']}")
                     
-                    # FIXED: Generate advanced PDF with QR code using corrected business info
+                    # Generate advanced PDF with QR code using corrected business info
                     try:
                         # Log what's being passed to PDF generation
                         invoice_data = zoho_payload.get("invoice", zoho_payload)
                         business_name = vsdc_payload.get("receipt", {}).get("trdeNm", settings.COMPANY_NAME)
                         logger.info(f"Generating PDF with business name: {business_name}")
                         
-                        # ✅ UPDATED: Pass vsdc_payload as Optional[dict] - it can be None
                         pdf_result = await vsdc_service.generate_advanced_pdf(
                             ebm_response=ebm_response, 
                             zoho_data=zoho_payload, 
-                            vsdc_payload=vsdc_payload  # This is now properly handled as Optional[dict]
+                            vsdc_payload=vsdc_payload
                         )
                         
                         # Enhanced response with business info
@@ -120,6 +180,7 @@ async def handle_zoho_webhook(request: Request):
                             content={
                                 "message": "Webhook processed successfully with dynamic tax calculation",
                                 "invoice_number": vsdc_payload["invcNo"],
+                                "vsdc_receipt_number": ebm_response.get("data", {}).get("rcptNo", "NOT_PROVIDED"),  # ADD: Show VSDC receipt number
                                 "business_info": {
                                     "name": business_name,
                                     "tin": vsdc_payload.get("tin"),
@@ -144,6 +205,7 @@ async def handle_zoho_webhook(request: Request):
                             content={
                                 "message": "Webhook forwarded successfully but PDF generation failed",
                                 "invoice_number": vsdc_payload["invcNo"],
+                                "vsdc_receipt_number": ebm_response.get("data", {}).get("rcptNo", "NOT_PROVIDED"),
                                 "business_info": {
                                     "name": vsdc_payload.get("receipt", {}).get("trdeNm"),
                                     "tin": vsdc_payload.get("tin")
@@ -224,32 +286,31 @@ async def handle_zoho_credit_note_webhook(request: Request):
     try:
         # Get the raw JSON payload
         zoho_payload = await request.json()
-        logger.info(f"📥 Received Zoho credit note webhook payload")
-        # logger.info(zoho_payload)
+        logger.info(f"Received Zoho credit note webhook payload")
         
-        # ✅ Enhanced payload structure logging
-        logger.info(f"🔍 Credit note payload structure: {list(zoho_payload.keys())}")
+        # Enhanced payload structure logging
+        logger.info(f"Credit note payload structure: {list(zoho_payload.keys())}")
         
-        # ✅ Enhanced transformation with better error handling
+        # Enhanced transformation with better error handling
         try:
             vsdc_payload = payload_transformer.transform_zoho_credit_note_to_vsdc(zoho_payload)
-            logger.info(f"✅ Transformed to VSDC credit note payload for: {vsdc_payload['invcNo']}")
+            logger.info(f"Transformed to VSDC credit note payload for: {vsdc_payload['invcNo']}")
         except (IndexError, KeyError, ValueError, TypeError) as transform_error:
-            logger.error(f"❌ Credit note transformation error: {str(transform_error)}")
-            logger.error(f"❌ Zoho payload structure: {list(zoho_payload.keys())}")
+            logger.error(f"Credit note transformation error: {str(transform_error)}")
+            logger.error(f"Zoho payload structure: {list(zoho_payload.keys())}")
             
             # Log credit note-specific structure
             if "creditnote" in zoho_payload:
                 credit_note_data = zoho_payload["creditnote"]
-                logger.error(f"❌ Credit note keys: {list(credit_note_data.keys())}")
+                logger.error(f"Credit note keys: {list(credit_note_data.keys())}")
                 
                 # Log invoices_credited specifically
                 invoices_credited = credit_note_data.get("invoices_credited", "NOT_FOUND")
-                logger.error(f"❌ invoices_credited: {invoices_credited}")
-                logger.error(f"❌ invoices_credited type: {type(invoices_credited)}")
+                logger.error(f"invoices_credited: {invoices_credited}")
+                logger.error(f"invoices_credited type: {type(invoices_credited)}")
                 
                 if isinstance(invoices_credited, list):
-                    logger.error(f"❌ invoices_credited length: {len(invoices_credited)}")
+                    logger.error(f"invoices_credited length: {len(invoices_credited)}")
             
             return JSONResponse(
                 status_code=400,
@@ -262,7 +323,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                 }
             )
         except Exception as transform_error:
-            logger.error(f"❌ Unexpected credit note transformation error: {str(transform_error)}")
+            logger.error(f"Unexpected credit note transformation error: {str(transform_error)}")
             return JSONResponse(
                 status_code=500,
                 content={
@@ -273,10 +334,10 @@ async def handle_zoho_credit_note_webhook(request: Request):
                 }
             )
         
-        # FIXED: Log business information for debugging
+        # Log business information for debugging
         log_business_info(zoho_payload, vsdc_payload, "credit_note")
         
-        # ✅ Enhanced VSDC API communication with better error handling
+        # Enhanced VSDC API communication with better error handling
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -286,7 +347,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                     headers={"Content-Type": "application/json"}
                 )
         except httpx.TimeoutException:
-            logger.error(f"❌ VSDC API timeout for credit note: {vsdc_payload.get('invcNo', 'UNKNOWN')}")
+            logger.error(f"VSDC API timeout for credit note: {vsdc_payload.get('invcNo', 'UNKNOWN')}")
             return JSONResponse(
                 status_code=504,
                 content={
@@ -297,7 +358,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                 }
             )
         except httpx.RequestError as req_error:
-            logger.error(f"❌ VSDC API request error for credit note: {str(req_error)}")
+            logger.error(f"VSDC API request error for credit note: {str(req_error)}")
             return JSONResponse(
                 status_code=502,
                 content={
@@ -313,8 +374,12 @@ async def handle_zoho_credit_note_webhook(request: Request):
         if response.status_code == 200:
             try:
                 ebm_response = response.json()
+                
+                # ADD: Detailed VSDC response logging for credit notes
+                log_vsdc_response_detailed(ebm_response, "credit_note")
+                
             except ValueError as e:
-                logger.error(f"❌ Invalid JSON response from VSDC: {response.text}")
+                logger.error(f"Invalid JSON response from VSDC: {response.text}")
                 raise HTTPException(
                     status_code=502,
                     detail=f"Invalid JSON response from VSDC API: {str(e)}"
@@ -326,20 +391,19 @@ async def handle_zoho_credit_note_webhook(request: Request):
             
             if result_code == '000':
                 # Success case
-                logger.info(f"✅ Credit note successfully processed by VSDC API: {vsdc_payload['invcNo']}")
+                logger.info(f"Credit note successfully processed by VSDC API: {vsdc_payload['invcNo']}")
                 
-                # FIXED: Generate credit note PDF with QR code using corrected business info
+                # Generate credit note PDF with QR code using corrected business info
                 try:
                     # Log what's being passed to PDF generation
                     credit_note_data = zoho_payload.get("creditnote", zoho_payload)
                     business_name = vsdc_payload.get("receipt", {}).get("trdeNm", settings.COMPANY_NAME)
-                    logger.info(f"🎯 Generating credit note PDF with business name: {business_name}")
+                    logger.info(f"Generating credit note PDF with business name: {business_name}")
                     
-                    # ✅ UPDATED: Pass vsdc_payload as Optional[dict] - it can be None
                     pdf_result = await vsdc_service.generate_credit_note_pdf(
                         ebm_response=ebm_response, 
                         zoho_data=zoho_payload, 
-                        vsdc_payload=vsdc_payload  # This is now properly handled as Optional[dict]
+                        vsdc_payload=vsdc_payload
                     )
                     
                     # Enhanced response with business info
@@ -348,6 +412,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                         content={
                             "message": "Credit note webhook processed successfully with dynamic tax calculation",
                             "credit_note_number": vsdc_payload["invcNo"],
+                            "vsdc_receipt_number": ebm_response.get("data", {}).get("rcptNo", "NOT_PROVIDED"),  # ADD: Show VSDC receipt number
                             "business_info": {
                                 "name": business_name,
                                 "tin": vsdc_payload.get("tin"),
@@ -366,13 +431,14 @@ async def handle_zoho_credit_note_webhook(request: Request):
                     )
                     
                 except Exception as pdf_error:
-                    logger.error(f"❌ Error generating credit note PDF: {str(pdf_error)}")
-                    logger.error(f"❌ Credit Note PDF Error Details: {pdf_error.__class__.__name__}: {str(pdf_error)}")
+                    logger.error(f"Error generating credit note PDF: {str(pdf_error)}")
+                    logger.error(f"Credit Note PDF Error Details: {pdf_error.__class__.__name__}: {str(pdf_error)}")
                     return JSONResponse(
                         status_code=200,
                         content={
                             "message": "Credit note webhook forwarded successfully but PDF generation failed",
                             "credit_note_number": vsdc_payload["invcNo"],
+                            "vsdc_receipt_number": ebm_response.get("data", {}).get("rcptNo", "NOT_PROVIDED"),
                             "business_info": {
                                 "name": vsdc_payload.get("receipt", {}).get("trdeNm"),
                                 "tin": vsdc_payload.get("tin")
@@ -389,7 +455,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                     )
             else:
                 # VSDC API returned an error
-                logger.error(f"❌ VSDC Credit Note API error - Code: {result_code}, Message: {result_message}")
+                logger.error(f"VSDC Credit Note API error - Code: {result_code}, Message: {result_message}")
                 
                 # Map common VSDC error codes to appropriate HTTP status codes
                 # Credit notes might have specific error codes
@@ -426,7 +492,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
                 )
         else:
             # HTTP-level error (network, server down, etc.)
-            logger.error(f"❌ HTTP error from VSDC Credit Note API: {response.status_code} - {response.text}")
+            logger.error(f"HTTP error from VSDC Credit Note API: {response.status_code} - {response.text}")
             return JSONResponse(
                 status_code=502,
                 content={
@@ -444,7 +510,7 @@ async def handle_zoho_credit_note_webhook(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Error processing credit note webhook: {str(e)}")
+        logger.error(f"Error processing credit note webhook: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
