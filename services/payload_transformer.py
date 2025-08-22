@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from typing import Optional
 from fastapi import HTTPException
-from utils.tax_calculator import calculate_tax, validate_required_fields  
+from utils.tax_calculator import calculate_tax, validate_required_fields, get_tax_category  
 import random
 
 logger = logging.getLogger(__name__)
@@ -14,9 +14,15 @@ class PayloadTransformer:
     def __init__(self, vsdc_service):
         self.vsdc_service = vsdc_service
     
-    def calculate_tax(self, price: float) -> float:
-        """Calculate tax using the formula: price * 18 / 118"""
-        return round(price * 18 / 118, 2)
+    def calculate_tax(self, price: float, tax_rate: float = 18.0) -> float:
+        """Calculate tax using dynamic tax rate with backwards compatibility"""
+        if tax_rate == 0:
+            return 0.0
+        return round(price * tax_rate / (100 + tax_rate), 2)
+    
+    def get_tax_category(self, tax_rate: float) -> str:
+        """Get tax category for a given tax rate"""
+        return get_tax_category(tax_rate)
     
     def extract_invoice_number_safely(self, invoice_number_raw: str, document_type: str = "invoice") -> int:
         """Extract invoice number with proper validation and logging"""
@@ -264,13 +270,27 @@ class PayloadTransformer:
                 "itemList": []
             }
             
+            # Initialize tax totals by category
+            tax_totals = {
+                'A': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0},
+                'B': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 18},
+                'C': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0},
+                'D': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0}
+            }
+            
             # Process items
             for idx, item in enumerate(items, start=1):
                 try:
                     price = float(item.get("rate", 0))
                     quantity = float(item.get("quantity", 1))
                     supply_amount = round(price * quantity, 2)
-                    tax_amount = calculate_tax(supply_amount)
+                    
+                    # Extract tax rate from item using VSDC service
+                    tax_rate = self.vsdc_service.get_tax_rate_from_zoho_item(item)
+                    tax_amount = self.calculate_tax(supply_amount, tax_rate)
+                    tax_category = self.get_tax_category(tax_rate)
+                    
+                    logger.info(f"Item {idx}: tax_rate={tax_rate}%, category={tax_category}, supply_amount={supply_amount}, tax_amount={tax_amount}")
                     
                     item_name = item.get("name") or item.get("description") or f"Item_{idx}"
                     
@@ -292,15 +312,21 @@ class PayloadTransformer:
                         "isrccNm": None,
                         "isrcRt": None,
                         "isrcAmt": None,
-                        "taxTyCd": "B",
+                        "taxTyCd": tax_category,
                         "taxblAmt": supply_amount,
                         "taxAmt": tax_amount,
                         "totAmt": supply_amount
                     }
                     
                     vsdc_payload["itemList"].append(vsdc_item)
-                    vsdc_payload["taxblAmtB"] += supply_amount
-                    vsdc_payload["taxAmtB"] += tax_amount
+                    
+                    # Aggregate by tax category
+                    tax_totals[tax_category]['taxblAmt'] += supply_amount
+                    tax_totals[tax_category]['taxAmt'] += tax_amount
+                    if tax_rate > 0 and tax_totals[tax_category]['taxRt'] == 0:
+                        tax_totals[tax_category]['taxRt'] = tax_rate
+                    
+                    # Update total amounts
                     vsdc_payload["totTaxblAmt"] += supply_amount
                     vsdc_payload["totTaxAmt"] += tax_amount
                     vsdc_payload["totAmt"] += supply_amount
@@ -309,9 +335,21 @@ class PayloadTransformer:
                     logger.error(f"Error processing item {idx}: {str(e)}")
                     raise ValueError(f"Invalid data in item {idx}: {str(e)}")
             
-            # Round amounts
-            vsdc_payload["taxblAmtB"] = round(vsdc_payload["taxblAmtB"], 2)
-            vsdc_payload["taxAmtB"] = round(vsdc_payload["taxAmtB"], 2)
+            # Update VSDC payload with aggregated tax amounts
+            vsdc_payload["taxblAmtA"] = round(tax_totals['A']['taxblAmt'], 2)
+            vsdc_payload["taxblAmtB"] = round(tax_totals['B']['taxblAmt'], 2)
+            vsdc_payload["taxblAmtC"] = round(tax_totals['C']['taxblAmt'], 2)
+            vsdc_payload["taxblAmtD"] = round(tax_totals['D']['taxblAmt'], 2)
+            
+            vsdc_payload["taxAmtA"] = round(tax_totals['A']['taxAmt'], 2)
+            vsdc_payload["taxAmtB"] = round(tax_totals['B']['taxAmt'], 2)
+            vsdc_payload["taxAmtC"] = round(tax_totals['C']['taxAmt'], 2)
+            vsdc_payload["taxAmtD"] = round(tax_totals['D']['taxAmt'], 2)
+            
+            vsdc_payload["taxRtA"] = tax_totals['A']['taxRt']
+            vsdc_payload["taxRtB"] = tax_totals['B']['taxRt']
+            vsdc_payload["taxRtC"] = tax_totals['C']['taxRt']
+            vsdc_payload["taxRtD"] = tax_totals['D']['taxRt']
             vsdc_payload["totTaxblAmt"] = round(vsdc_payload["totTaxblAmt"], 2)
             vsdc_payload["totTaxAmt"] = round(vsdc_payload["totTaxAmt"], 2)
             vsdc_payload["totAmt"] = round(vsdc_payload["totAmt"], 2)
@@ -395,17 +433,29 @@ class PayloadTransformer:
             logger.info(f"Credit note number: {invc_no} (from {credit_note_number})")
             logger.info(f"Original invoice number: {org_invc_no} (from {invoice_number})")
             
-            # Totals
-            taxbl_amt_b = 0
-            tax_amt_b = 0
+            # Initialize totals
             total_amt = 0
             item_list = []
+            
+            # Initialize tax totals by category
+            tax_totals = {
+                'A': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0},
+                'B': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 18},
+                'C': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0},
+                'D': {'taxblAmt': 0, 'taxAmt': 0, 'taxRt': 0}
+            }
             
             for idx, item in enumerate(items, start=1):
                 price = float(item.get("rate", 0))
                 quantity = float(item.get("quantity", 1))
                 supply_amount = round(price * quantity, 2)
-                tax_amount = calculate_tax(supply_amount)
+                
+                # Extract tax rate from item using VSDC service
+                tax_rate = self.vsdc_service.get_tax_rate_from_zoho_item(item)
+                tax_amount = self.calculate_tax(supply_amount, tax_rate)
+                tax_category = self.get_tax_category(tax_rate)
+                
+                logger.info(f"Credit Note Item {idx}: tax_rate={tax_rate}%, category={tax_category}, supply_amount={supply_amount}, tax_amount={tax_amount}")
                 
                 item_name = item.get("name") or item.get("description") or f"Item_{idx}"
                 
@@ -427,15 +477,21 @@ class PayloadTransformer:
                     "isrccNm": None,
                     "isrcRt": None,
                     "isrcAmt": None,
-                    "taxTyCd": "B",
+                    "taxTyCd": tax_category,
                     "taxblAmt": supply_amount,
                     "taxAmt": tax_amount,
                     "totAmt": supply_amount
                 }
                 
                 item_list.append(vsdc_item)
-                taxbl_amt_b += supply_amount
-                tax_amt_b += tax_amount
+                
+                # Aggregate by tax category
+                tax_totals[tax_category]['taxblAmt'] += supply_amount
+                tax_totals[tax_category]['taxAmt'] += tax_amount
+                if tax_rate > 0 and tax_totals[tax_category]['taxRt'] == 0:
+                    tax_totals[tax_category]['taxRt'] = tax_rate
+                
+                # Update totals
                 total_amt += supply_amount
             
             vsdc_payload = {
@@ -458,20 +514,20 @@ class PayloadTransformer:
                 "rfdDt": datetime.strptime(refund_date, "%Y-%m-%d").strftime("%Y%m%d%H%M%S"),
                 "rfdRsnCd": "01",
                 "totItemCnt": len(items),
-                "taxblAmtA": 0,
-                "taxblAmtB": round(taxbl_amt_b, 2),
-                "taxblAmtC": 0,
-                "taxblAmtD": 0,
-                "taxRtA": 0,
-                "taxRtB": 18,
-                "taxRtC": 0,
-                "taxRtD": 0,
-                "taxAmtA": 0,
-                "taxAmtB": round(tax_amt_b, 2),
-                "taxAmtC": 0,
-                "taxAmtD": 0,
-                "totTaxblAmt": round(taxbl_amt_b, 2),
-                "totTaxAmt": round(tax_amt_b, 2),
+                "taxblAmtA": round(tax_totals['A']['taxblAmt'], 2),
+                "taxblAmtB": round(tax_totals['B']['taxblAmt'], 2),
+                "taxblAmtC": round(tax_totals['C']['taxblAmt'], 2),
+                "taxblAmtD": round(tax_totals['D']['taxblAmt'], 2),
+                "taxRtA": tax_totals['A']['taxRt'],
+                "taxRtB": tax_totals['B']['taxRt'],
+                "taxRtC": tax_totals['C']['taxRt'],
+                "taxRtD": tax_totals['D']['taxRt'],
+                "taxAmtA": round(tax_totals['A']['taxAmt'], 2),
+                "taxAmtB": round(tax_totals['B']['taxAmt'], 2),
+                "taxAmtC": round(tax_totals['C']['taxAmt'], 2),
+                "taxAmtD": round(tax_totals['D']['taxAmt'], 2),
+                "totTaxblAmt": round(sum([tax_totals[cat]['taxblAmt'] for cat in tax_totals]), 2),
+                "totTaxAmt": round(sum([tax_totals[cat]['taxAmt'] for cat in tax_totals]), 2),
                 "totAmt": round(total_amt, 2),
                 "prchrAcptcYn": "N",
                 "remark": credit_note.get("notes", ""),

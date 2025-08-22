@@ -3,9 +3,11 @@ Tax Calculation Utilities
 """
 
 
-def calculate_tax(price: float) -> float:
-    """Calculate tax using the formula: price * 18 / 118"""
-    return round(price * 18 / 118, 2)
+def calculate_tax(price: float, tax_rate: float = 18.0) -> float:
+    """Calculate tax using dynamic tax rate with backwards compatibility"""
+    if tax_rate == 0:
+        return 0.0
+    return round(price * tax_rate / (100 + tax_rate), 2)
 
 def validate_required_fields(zoho_payload: dict) -> None:
     """Validate required fields from Zoho payload"""
@@ -81,6 +83,11 @@ def get_tax_category(vat_rate: float) -> str:
         vat_rate: VAT rate as percentage
     
     Returns:
-        Tax category ('A' for 0%, 'B' for 18%)
+        Tax category ('A' for 0%, 'B' for 18%, 'C' for other rates, 'D' for special cases)
     """
-    return 'A' if vat_rate == 0 else 'B'
+    if vat_rate == 0:
+        return 'A'  # VAT_Exempt, VAT_Zero_Rated, Special_Rate
+    elif vat_rate == 18:
+        return 'B'  # VAT_Standard
+    else:
+        return 'C'  # Other tax rates
