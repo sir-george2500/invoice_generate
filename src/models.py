@@ -46,6 +46,8 @@ class Invoice:
     vsdc_internal_data: str = ""
     vsdc_receipt_signature: str = ""
     vsdc_receipt_date: str = ""
+    original_invoice_number: str = ""
+    invoice_number_numeric: str = ""
     
     def to_dict(self):
         return {
@@ -74,5 +76,7 @@ class Invoice:
             'vsdc_total_receipt_no': self.vsdc_total_receipt_no,
             'vsdc_internal_data': self.vsdc_internal_data,
             'vsdc_receipt_signature': self.vsdc_receipt_signature,
-            'vsdc_receipt_date': self.vsdc_receipt_date
+            'vsdc_receipt_date': self.vsdc_receipt_date,
+            'original_invoice_number': self.original_invoice_number,
+            'invoice_number_numeric': self.invoice_number_numeric
         }

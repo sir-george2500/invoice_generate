@@ -686,7 +686,55 @@ async def test_pdf_generation():
         
     except Exception as e:
         logger.error(f"Error in PDF generation test: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error in PDF generation test: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error in PDF generation test: {str(e)}")@app.post("/test/validate-qr")
+async def test_qr_validation():
+    """Test QR code generation and validation"""
+    try:
+        # Sample invoice data for testing
+        sample_invoice_data = {
+            "client_name": "uwase nicaise",
+            "invoice_date": "25-08-2025",
+            "invoice_time": "15:42:17",
+            "sdc_id": "SDC010013744",
+            "vsdc_receipt_no": "91",
+            "receipt_number": "91",
+            "vsdc_internal_data": "IKBT-G5VU-MWVE-YXO4-C6UX-3PJV-AM",
+            "vsdc_receipt_signature": "IOSO-NK3N-CTNT-7BBF",
+            "vsdc_receipt_date": "00:00:00",
+            "mrc": "WIS00004019",
+            "invoice_number": "91"
+        }
+        
+        # Generate and validate QR code
+        if vsdc_service.qr_generator:
+            validation_result = vsdc_service.qr_generator.validate_generated_qr(sample_invoice_data)
+            
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": "QR code validation completed",
+                    "validation_result": validation_result,
+                    "sample_data_used": sample_invoice_data
+                }
+            )
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "message": "QR generator not available - check Cloudinary configuration",
+                    "cloudinary_configured": settings.is_cloudinary_configured()
+                }
+            )
+        
+    except Exception as e:
+        logger.error(f"Error in QR validation test: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "QR validation test failed",
+                "error": str(e)
+            }
+        )
 
 @app.get("/health")
 async def api_health_check():

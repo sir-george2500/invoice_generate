@@ -2,13 +2,10 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional, Dict, Any
-import re
 from src.invoice_generator import InvoiceGenerator
 from src.models import Invoice, Company, Client, InvoiceItem
 from src.invoice_qrcode import InvoiceQRGenerator
 from utils.tax_calculator import (
-    extract_vat_from_inclusive_price, 
-    calculate_exclusive_price,
     calculate_vat_amount,
     get_tax_category
 )
@@ -342,10 +339,31 @@ class VSSDCInvoiceService:
                     )
                     items.append(item)
             
-            # Safe invoice number extraction with audit trail
-            invoice_number = self.extract_receipt_number_safely(ebm_response, zoho_data, vsdc_payload)
+            # Extract the original invoice number from Zoho (this should be preserved)
+            original_invoice_number = ""
+            if "creditnote" in zoho_data:
+                original_invoice_number = str(zoho_data["creditnote"].get("creditnote_number", ""))
+            elif "invoice" in zoho_data:
+                original_invoice_number = str(zoho_data["invoice"].get("invoice_number", ""))
+            else:
+                original_invoice_number = str(zoho_data.get("invoice_number", zoho_data.get("creditnote_number", "")))
             
-            logger.info(f"Final invoice number for PDF: {invoice_number}")
+            # Use the original Zoho invoice number for the invoice_number field
+            invoice_number = original_invoice_number if original_invoice_number.strip() else "UNKNOWN"
+            
+            # Extract just the numeric part for the second receipt number
+            import re
+            numeric_parts = re.findall(r'\d+', invoice_number)
+            if numeric_parts:
+                # Take the last numeric part and remove leading zeros (like significant figures)
+                raw_numeric = numeric_parts[-1]
+                invoice_number_numeric = str(int(raw_numeric))  # Convert to int and back to string removes leading zeros
+            else:
+                invoice_number_numeric = "0"
+            
+            logger.info(f"Using original Zoho invoice number: {invoice_number}")
+            logger.info(f"Extracted numeric part for receipt: {invoice_number_numeric}")
+            logger.info(f"Original invoice number for QR: {original_invoice_number}")
             
             # Extract VSDC data fields
             vsdc_data = ebm_response.get("data", {})
@@ -354,6 +372,9 @@ class VSSDCInvoiceService:
             vsdc_internal_data = str(vsdc_data.get("intrlData", ""))
             vsdc_receipt_signature = str(vsdc_data.get("rcptSign", ""))
             vsdc_receipt_date_raw = str(vsdc_data.get("vsdcRcptPbctDate", ""))
+            
+            logger.info(f"VSDC receipt number from EBM response: {vsdc_receipt_no}")
+            logger.info(f"Original Zoho invoice number: {invoice_number}")
             
             # Format VSDC receipt date
             vsdc_receipt_date = ""
@@ -416,7 +437,9 @@ class VSSDCInvoiceService:
                 vsdc_total_receipt_no=vsdc_total_receipt_no,
                 vsdc_internal_data=vsdc_internal_data,
                 vsdc_receipt_signature=vsdc_receipt_signature,
-                vsdc_receipt_date=vsdc_receipt_date
+                vsdc_receipt_date=vsdc_receipt_date,
+                original_invoice_number=original_invoice_number,
+                invoice_number_numeric=invoice_number_numeric
             )
             
             logger.info(f"Invoice model created - Company: {company.name}, Client: {client.name}, Client TIN: {client.tin}, Company TIN: {company.tin}")

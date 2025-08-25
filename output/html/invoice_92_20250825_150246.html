@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Invoice {{ invoice_number }}</title>
+    <title>Invoice 92</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -120,12 +120,12 @@
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
             
             <div style="margin-top: 0.5cm;">
-                <strong style="font-size: 14pt;">{{ company_name }}</strong><br>
-                {{ company_address }}<br>
-                TEL: {{ company_tel }}<br>
-                EMAIL: {{ company_email }}<br>
-                TIN: {{ company_tin }}<br>
-                CASHIER: {{ cashier }}
+                <strong style="font-size: 14pt;">BITS</strong><br>
+                Rwanda, Kigali Sonatube<br>
+                TEL: 0785757324<br>
+                EMAIL: xdelta2500@gmail.com<br>
+                TIN: 944000008<br>
+                CASHIER: admin(944000008)
             </div>
         </div>
         
@@ -133,8 +133,8 @@
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
             
             <div class="invoice-box" style="margin-top: 1cm;">
-                <strong>INVOICE NO : {{ invoice_number }}</strong><br><br>
-                Date : {{ invoice_date }}
+                <strong>INVOICE NO : 92</strong><br><br>
+                Date : 25-08-2025
             </div>
         </div>
     </div>
@@ -142,8 +142,8 @@
     <!-- Invoice To -->
     <div class="invoice-to">
         <strong>INVOICE TO</strong><br>
-        TIN : {{ client_tin }}<br>
-        Name : {{ client_name }}
+        TIN : 998000003<br>
+        Name : Roviagate
     </div>
 
     <!-- Items Table -->
@@ -159,40 +159,47 @@
             </tr>
         </thead>
         <tbody>
-            {% for item in items %}
+            
             <tr>
-                <td>{{ item.code }}</td>
-                <td>{{ item.description }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.tax }}</td>
-                <td>{{ item.unit_price }}</td>
-                <td>{{ item.total_price }}</td>
+                <td>6958226000000093322</td>
+                <td>15-inch laptop with 8GB RAM, 256GB SSD</td>
+                <td>1.00</td>
+                <td>B</td>
+                <td>400,000.00</td>
+                <td>400,000.00</td>
             </tr>
-            {% endfor %}
+            
+            <tr>
+                <td>6958226000000093344</td>
+                <td>Bluetooth wireless optical mouse</td>
+                <td>1.00</td>
+                <td>B</td>
+                <td>25,000.00</td>
+                <td>25,000.00</td>
+            </tr>
+            
         </tbody>
     </table>
 
     <!-- Footer Section -->
     <div class="footer">
         <div class="sdc-info">
-            Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
-            SDC ID :{{ sdc_id }}<br>
-            RECEIPT NUMBER :         {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
+            Date :25-08-2025  Time:15:02:41<br>
+            SDC ID :SDC010013744<br>
+            RECEIPT NUMBER :         92/92NS<br>
             Internal Data :<br>
-            {{ vsdc_internal_data | default('N/A') }}<br>
+            AQEMEYVOA7ZNSWDKTBANATFGLY<br>
             Receipt Signature :<br>
-            {{ vsdc_receipt_signature | default('N/A') }}<br>
+            2BOE33THA4PLHYQW<br>
             --------------------------------<br>
-            RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
-            Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
-            MRC: {{ mrc }}<br><br>
+            RECEIPT NUMBER :              92<br>
+            Date:25-08-2025  Time:25-08-2025 15:02:41<br>
+            MRC: WIS00004019<br><br>
             Powered by EBM v2
             <div class="qr-placeholder">
-                {% if qr_code_path %}
-                <img src="{{ qr_code_path }}" alt="QR Code" style="max-width: 100%; max-height: 100%;">
-                {% else %}
-                QR Code
-                {% endif %}
+                
+                <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756126963/invoice_qr_codes/invoice_qr_codes/invoice_92_qr.png" alt="QR Code" style="max-width: 100%; max-height: 100%;">
+                
             </div>
         </div>
         
@@ -200,31 +207,23 @@
             <table>
                 <tr>
                     <td><strong>Total Rwf</strong></td>
-                    <td>{{ total_rwf }}</td>
+                    <td>425,000.00</td>
                 </tr>
-                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
                 <tr>
                     <td><strong>Total A-EX Rwf</strong></td>
-                    <td>{{ total_aex }}</td>
-                </tr>
-                {% endif %}
-                <tr>
-                    <td><strong>Total B-18% Rwf</strong></td>
-                    <td>{{ total_b }}</td>
-                </tr>
-                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
-                <tr>
-                    <td><strong>Total Tax A Rwf</strong></td>
                     <td>0.00</td>
                 </tr>
-                {% endif %}
+                <tr>
+                    <td><strong>Total B-18% Rwf</strong></td>
+                    <td>425,000.00</td>
+                </tr>
                 <tr>
                     <td><strong>Total Tax B Rwf</strong></td>
-                    <td>{{ total_tax_b }}</td>
+                    <td>64,830.51</td>
                 </tr>
                 <tr>
                     <td><strong>Total Tax Rwf</strong></td>
-                    <td>{{ total_tax }}</td>
+                    <td>64,830.51</td>
                 </tr>
             </table>
         </div>
