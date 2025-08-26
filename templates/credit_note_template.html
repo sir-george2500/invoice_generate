@@ -219,15 +219,17 @@
     <!-- Footer Section -->
     <div class="footer">
         <div class="sdc-info">
-            <strong>SDC INFORMATION</strong><br>
-            <div class="underline"></div>
-            Date : {{ invoice_date }} &nbsp;&nbsp; Time : {{ invoice_time }}<br>
-            SDC ID : {{ sdc_id }}<br>
-            RECEIPT NUMBER : {{ receipt_number }}<br>
+            Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
+            SDC ID :{{ sdc_id }}<br>
+            RECEIPT NUMBER :         {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
             Internal Data :<br>
-            RECEIPT NUMBER : {{ invoice_number }}<br>
-            Date : {{ invoice_date }} &nbsp;&nbsp; Time : {{ invoice_time }}<br>
-            MRC : {{ mrc }}<br>
+            {{ vsdc_internal_data | default('N/A') }}<br>
+            Receipt Signature :<br>
+            {{ vsdc_receipt_signature | default('N/A') }}<br>
+            --------------------------------<br>
+            RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
+            Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
+            MRC: {{ mrc }}<br><br>
             Powered by EBM v2
             
             <div class="qr-placeholder">
@@ -245,14 +247,22 @@
                     <td><strong>{% if invoice_type == "Credit Note" %}Refund Total Rwf{% else %}Total Rwf{% endif %}</strong></td>
                     <td>{{ total_rwf }}</td>
                 </tr>
+                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
                 <tr>
-                    <td><strong>Total A-EX Rwf</strong></td>
+                    <td><strong>{% if invoice_type == "Credit Note" %}Refund A-EX Rwf{% else %}Total A-EX Rwf{% endif %}</strong></td>
                     <td>{{ total_aex }}</td>
                 </tr>
+                {% endif %}
                 <tr>
-                    <td><strong>Total B-18% Rwf</strong></td>
+                    <td><strong>{% if invoice_type == "Credit Note" %}Refund B-18% Rwf{% else %}Total B-18% Rwf{% endif %}</strong></td>
                     <td>{{ total_b }}</td>
                 </tr>
+                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
+                <tr>
+                    <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax A Rwf{% else %}Total Tax A Rwf{% endif %}</strong></td>
+                    <td>0.00</td>
+                </tr>
+                {% endif %}
                 <tr>
                     <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax B Rwf{% else %}Total Tax B Rwf{% endif %}</strong></td>
                     <td>{{ total_tax_b }}</td>

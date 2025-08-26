@@ -36,7 +36,7 @@ Internal Data :
 Receipt Signature :
 {invoice_data.get("vsdc_receipt_signature", "")}
 --------------------------------
-RECEIPT NUMBER :              {invoice_data.get("original_invoice_number", invoice_data.get("invoice_number", ""))}
+RECEIPT NUMBER :              {invoice_data.get("invoice_number_numeric", invoice_data.get("invoice_number", ""))}
 Date:{invoice_data.get("invoice_date", "")}  Time:{invoice_data.get("vsdc_receipt_date", invoice_data.get("invoice_time", ""))}
 MRC: {invoice_data.get("mrc", "")}"""
         

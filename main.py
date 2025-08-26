@@ -686,7 +686,9 @@ async def test_pdf_generation():
         
     except Exception as e:
         logger.error(f"Error in PDF generation test: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error in PDF generation test: {str(e)}")@app.post("/test/validate-qr")
+        raise HTTPException(status_code=500, detail=f"Error in PDF generation test: {str(e)}")
+
+@app.post("/test/validate-qr")
 async def test_qr_validation():
     """Test QR code generation and validation"""
     try:
