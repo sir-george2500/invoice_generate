@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice SCALE-TEST-002</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2cm;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1cm;
+        }
+        .company-info {
+            width: 60%;
+        }
+        .company-logo {
+            max-width: 67%;
+            height: auto;
+        }
+        .invoice-info {
+            width: 35%;
+            text-align: right;
+        }
+        .rwanda-seal {
+            max-width: 50%;
+            height: auto;
+        }
+        .invoice-box {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin-top: 1cm;
+        }
+        .invoice-to {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin: 1cm 0;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1cm 0;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid black;
+            padding: 6px 4px;
+            text-align: left;
+            font-size: 10pt;
+            vertical-align: top;
+        }
+        .items-table th {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            page-break-after: avoid;
+        }
+        .items-table td:nth-child(3), 
+        .items-table td:nth-child(5), 
+        .items-table td:nth-child(6) {
+            text-align: right;
+        }
+        .items-table tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        /* Allow table to break naturally across pages */
+        .items-table thead {
+            display: table-header-group;
+        }
+        
+        .items-table tbody {
+            display: table-row-group;
+        }
+        
+        /* Ensure long descriptions wrap properly */
+        .items-table td:nth-child(2) {
+            word-wrap: break-word;
+            max-width: 250px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1cm;
+            page-break-inside: avoid;
+            min-height: 6cm;
+        }
+        .sdc-info {
+            width: 50%;
+            flex-shrink: 0;
+        }
+        .totals-table {
+            width: 45%;
+            flex-shrink: 0;
+        }
+        .totals-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals-table th, .totals-table td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+        }
+        .qr-placeholder {
+            border: 1px solid black;
+            width: 3cm;
+            height: 3cm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.5cm;
+        }
+        .underline {
+            border-bottom: 1px solid black;
+            width: 5cm;
+            margin: 5px 0;
+        }
+        .vsdc-details {
+            margin-top: 0.5cm;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+        }
+        .vsdc-signature {
+            font-family: monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure footer stays together */
+        .footer-container {
+            page-break-inside: avoid;
+            margin-top: 2cm;
+            clear: both;
+        }
+        
+        /* For long item lists, allow items to flow naturally */
+        .items-section {
+            margin-bottom: 2cm;
+            overflow: visible;
+        }
+        
+        /* Force footer to a new page if needed for many items */
+        .items-table + .footer-container {
+            page-break-before: auto;
+        }
+        
+        @media print {
+            body { margin: 1cm; }
+            
+            /* Ensure header doesn't repeat */
+            .header { 
+                page-break-after: avoid;
+            }
+            
+            /* Keep totals and SDC info together */
+            .footer {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
+            
+            <div style="margin-top: 0.5cm;">
+                <strong style="font-size: 14pt;">Test Company Ltd</strong><br>
+                Kigali, Rwanda<br>
+                TEL: 0785757324<br>
+                EMAIL: test@company.com<br>
+                TIN: 944000008<br>
+                CASHIER: admin(944000008)
+            </div>
+        </div>
+        
+        <div class="invoice-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
+            
+            <div class="invoice-box" style="margin-top: 1cm;">
+                <strong>INVOICE NO : SCALE-TEST-002</strong><br><br>
+                Date : 26-08-2025
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice To -->
+    <div class="invoice-to">
+        <strong>INVOICE TO</strong><br>
+        TIN : 998000003<br>
+        Name : Test Client With Long Name That Might Wrap
+    </div>
+
+    <!-- Items Table -->
+    <div class="items-section">
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item Code</th>
+                    <th>Item Description</th>
+                    <th>Qty</th>
+                    <th>Tax</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>RW1NTXU000000001</td>
+                    <td>Basic item with short description (Item #1)</td>
+                    <td>2.00</td>
+                    <td>B</td>
+                    <td>5,000.00</td>
+                    <td>10,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000002</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #2)</td>
+                    <td>3.00</td>
+                    <td>B</td>
+                    <td>10,000.00</td>
+                    <td>30,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000003</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #3)</td>
+                    <td>4.00</td>
+                    <td>B</td>
+                    <td>15,000.00</td>
+                    <td>60,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000004</td>
+                    <td>Another short item (Item #4)</td>
+                    <td>5.00</td>
+                    <td>B</td>
+                    <td>20,000.00</td>
+                    <td>100,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000005</td>
+                    <td>Standard business item for professional services with moderate length description (Item #5)</td>
+                    <td>6.00</td>
+                    <td>B</td>
+                    <td>25,000.00</td>
+                    <td>150,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000006</td>
+                    <td>Basic item with short description (Item #6)</td>
+                    <td>7.00</td>
+                    <td>B</td>
+                    <td>30,000.00</td>
+                    <td>210,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000007</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #7)</td>
+                    <td>8.00</td>
+                    <td>B</td>
+                    <td>35,000.00</td>
+                    <td>280,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000008</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #8)</td>
+                    <td>9.00</td>
+                    <td>A</td>
+                    <td>40,000.00</td>
+                    <td>360,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000009</td>
+                    <td>Another short item (Item #9)</td>
+                    <td>10.00</td>
+                    <td>B</td>
+                    <td>45,000.00</td>
+                    <td>450,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000010</td>
+                    <td>Standard business item for professional services with moderate length description (Item #10)</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>50,000.00</td>
+                    <td>50,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000011</td>
+                    <td>Basic item with short description (Item #11)</td>
+                    <td>2.00</td>
+                    <td>B</td>
+                    <td>55,000.00</td>
+                    <td>110,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000012</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #12)</td>
+                    <td>3.00</td>
+                    <td>B</td>
+                    <td>60,000.00</td>
+                    <td>180,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000013</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #13)</td>
+                    <td>4.00</td>
+                    <td>B</td>
+                    <td>65,000.00</td>
+                    <td>260,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000014</td>
+                    <td>Another short item (Item #14)</td>
+                    <td>5.00</td>
+                    <td>B</td>
+                    <td>70,000.00</td>
+                    <td>350,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000015</td>
+                    <td>Standard business item for professional services with moderate length description (Item #15)</td>
+                    <td>6.00</td>
+                    <td>B</td>
+                    <td>75,000.00</td>
+                    <td>450,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000016</td>
+                    <td>Basic item with short description (Item #16)</td>
+                    <td>7.00</td>
+                    <td>A</td>
+                    <td>80,000.00</td>
+                    <td>560,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000017</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #17)</td>
+                    <td>8.00</td>
+                    <td>B</td>
+                    <td>85,000.00</td>
+                    <td>680,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000018</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #18)</td>
+                    <td>9.00</td>
+                    <td>B</td>
+                    <td>90,000.00</td>
+                    <td>810,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000019</td>
+                    <td>Another short item (Item #19)</td>
+                    <td>10.00</td>
+                    <td>B</td>
+                    <td>95,000.00</td>
+                    <td>950,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000020</td>
+                    <td>Standard business item for professional services with moderate length description (Item #20)</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>100,000.00</td>
+                    <td>100,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000021</td>
+                    <td>Basic item with short description (Item #21)</td>
+                    <td>2.00</td>
+                    <td>B</td>
+                    <td>105,000.00</td>
+                    <td>210,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000022</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #22)</td>
+                    <td>3.00</td>
+                    <td>B</td>
+                    <td>110,000.00</td>
+                    <td>330,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000023</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #23)</td>
+                    <td>4.00</td>
+                    <td>B</td>
+                    <td>115,000.00</td>
+                    <td>460,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000024</td>
+                    <td>Another short item (Item #24)</td>
+                    <td>5.00</td>
+                    <td>A</td>
+                    <td>120,000.00</td>
+                    <td>600,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000025</td>
+                    <td>Standard business item for professional services with moderate length description (Item #25)</td>
+                    <td>6.00</td>
+                    <td>B</td>
+                    <td>125,000.00</td>
+                    <td>750,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000026</td>
+                    <td>Basic item with short description (Item #26)</td>
+                    <td>7.00</td>
+                    <td>B</td>
+                    <td>130,000.00</td>
+                    <td>910,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000027</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #27)</td>
+                    <td>8.00</td>
+                    <td>B</td>
+                    <td>135,000.00</td>
+                    <td>1,080,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000028</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #28)</td>
+                    <td>9.00</td>
+                    <td>B</td>
+                    <td>140,000.00</td>
+                    <td>1,260,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000029</td>
+                    <td>Another short item (Item #29)</td>
+                    <td>10.00</td>
+                    <td>B</td>
+                    <td>145,000.00</td>
+                    <td>1,450,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000030</td>
+                    <td>Standard business item for professional services with moderate length description (Item #30)</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>150,000.00</td>
+                    <td>150,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000031</td>
+                    <td>Basic item with short description (Item #31)</td>
+                    <td>2.00</td>
+                    <td>B</td>
+                    <td>155,000.00</td>
+                    <td>310,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000032</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #32)</td>
+                    <td>3.00</td>
+                    <td>A</td>
+                    <td>160,000.00</td>
+                    <td>480,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000033</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #33)</td>
+                    <td>4.00</td>
+                    <td>B</td>
+                    <td>165,000.00</td>
+                    <td>660,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000034</td>
+                    <td>Another short item (Item #34)</td>
+                    <td>5.00</td>
+                    <td>B</td>
+                    <td>170,000.00</td>
+                    <td>850,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000035</td>
+                    <td>Standard business item for professional services with moderate length description (Item #35)</td>
+                    <td>6.00</td>
+                    <td>B</td>
+                    <td>175,000.00</td>
+                    <td>1,050,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000036</td>
+                    <td>Basic item with short description (Item #36)</td>
+                    <td>7.00</td>
+                    <td>B</td>
+                    <td>180,000.00</td>
+                    <td>1,260,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000037</td>
+                    <td>Medium length item description that should wrap properly on the invoice template (Item #37)</td>
+                    <td>8.00</td>
+                    <td>B</td>
+                    <td>185,000.00</td>
+                    <td>1,480,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000038</td>
+                    <td>Very long item description that definitely needs to wrap across multiple lines in the PDF to test the text wrapping functionality of the updated template design (Item #38)</td>
+                    <td>9.00</td>
+                    <td>B</td>
+                    <td>190,000.00</td>
+                    <td>1,710,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000039</td>
+                    <td>Another short item (Item #39)</td>
+                    <td>10.00</td>
+                    <td>B</td>
+                    <td>195,000.00</td>
+                    <td>1,950,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000040</td>
+                    <td>Standard business item for professional services with moderate length description (Item #40)</td>
+                    <td>1.00</td>
+                    <td>A</td>
+                    <td>200,000.00</td>
+                    <td>200,000.00</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer-container no-page-break">
+        <div class="footer">
+            <div class="sdc-info">
+                Date :26-08-2025   Time:15:41:27<br>
+                SDC ID :SDC010013744<br>
+                RECEIPT NUMBER :         999/999NS<br>
+                Internal Data :<br>
+                SCALE-TEST-INTERNAL-DATA-LONG-STRING<br>
+                Receipt Signature :<br>
+                SCALE-TEST-SIGNATURE<br>
+                --------------------------------<br>
+                RECEIPT NUMBER :              2<br>
+                Date:26-08-2025   Time:26-08-2025 15:41:27<br>
+                MRC: WIS00004019<br><br>
+                Powered by EBM v2
+                <div class="qr-placeholder">
+                    
+                    QR Code
+                    
+                </div>
+            </div>
+            
+            <div class="totals-table">
+                <table>
+                    <tr>
+                        <td><strong>Total Rwf</strong></td>
+                        <td>8,200,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total B-18% Rwf</strong></td>
+                        <td>8,200,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total Tax B Rwf</strong></td>
+                        <td>1,249,152.54</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Tax Rwf</strong></td>
+                        <td>1,249,152.54</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

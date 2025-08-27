@@ -10,69 +10,173 @@
             font-size: 11pt;
             line-height: 1.2;
         }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
         .header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 1cm;
+            align-items: flex-start;
+            margin-bottom: 0.3cm;
         }
-        .company-info {
-            width: 60%;
+        .header-left {
+            width: 30%;
+            text-align: left;
         }
-        .company-logo {
-            max-width: 67%;
-            height: auto;
+        .header-center {
+            width: 40%;
+            text-align: center;
         }
-        .invoice-info {
-            width: 35%;
+        .header-right {
+            width: 30%;
             text-align: right;
         }
-        .rwanda-seal {
-            max-width: 50%;
+        .company-logo {
+            max-width: 160px;
+            max-height: 160px;
+            width: auto;
             height: auto;
+            object-fit: contain;
         }
-        .invoice-box {
-            border: 1px solid black;
-            padding: 10px;
-            display: inline-block;
-            margin-top: 1cm;
+        .rwanda-seal {
+            max-width: 160px;
+            max-height: 160px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
         }
-        .credit-note-box {
-            border: 2px solid red;
-            background-color: #ffe6e6;
-            padding: 10px;
-            display: inline-block;
-            margin-top: 1cm;
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .company-details {
+            font-size: 9pt;
+            line-height: 1.2;
+            margin-top: 5px;
+        }
+        .invoice-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 0.3cm 0;
+        }
+        .invoice-to-section, .credit-note-to-section {
+            width: 45%;
+        }
+        .invoice-to-label, .credit-note-to-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+            font-size: 9pt;
+        }
+        .credit-note-to-label {
+            color: #d32f2f;
         }
         .invoice-to {
             border: 1px solid black;
-            padding: 10px;
-            display: inline-block;
-            margin: 1cm 0;
+            padding: 8px;
+            font-size: 9pt;
         }
         .credit-note-to {
             border: 2px solid red;
             background-color: #ffe6e6;
-            padding: 10px;
-            display: inline-block;
-            margin: 1cm 0;
+            padding: 8px;
+            font-size: 9pt;
+        }
+        .invoice-details-section, .credit-note-details-section {
+            width: 45%;
+        }
+        .invoice-details-label, .credit-note-details-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        .credit-note-details-label {
+            color: #d32f2f;
+        }
+        .invoice-details {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        .credit-note-details {
+            border: 2px solid red;
+            background-color: #ffe6e6;
+            padding: 8px;
+            text-align: left;
+            font-size: 9pt;
         }
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1cm 0;
+            margin: 0.2cm 0;
+            table-layout: fixed;
+            page-break-inside: avoid;
         }
         .items-table th, .items-table td {
             border: 1px solid black;
-            padding: 8px;
+            padding: 4px 3px;
             text-align: left;
+            font-size: 9pt;
+            vertical-align: top;
+            height: 20px;
+            overflow: hidden;
+            word-wrap: break-word;
         }
         .items-table th {
             font-weight: bold;
+            background-color: #f5f5f5;
+            height: 25px;
+            font-size: 9pt;
         }
-        .items-table td:nth-child(3), 
-        .items-table td:nth-child(5), 
-        .items-table td:nth-child(6) {
+        .items-table td:nth-child(1), .items-table th:nth-child(1) {
+            width: 22%;
+        }
+        .items-table td:nth-child(2), .items-table th:nth-child(2) {
+            width: 40%;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
+        .items-table td:nth-child(3), .items-table th:nth-child(3) {
+            width: 6%;
+            text-align: center;
+        }
+        .items-table td:nth-child(4), .items-table th:nth-child(4) {
+            width: 5%;
+            text-align: center;
+        }
+        .items-table td:nth-child(5), .items-table th:nth-child(5) {
+            width: 13%;
             text-align: right;
+        }
+        .items-table td:nth-child(6), .items-table th:nth-child(6) {
+            width: 14%;
+            text-align: right;
+        }
+        .items-table tbody tr {
+            height: 20px;
+            border: none;
+        }
+        .items-table tbody td {
+            border-top: none;
+            border-bottom: none;
+            height: 20px;
+        }
+        .items-table tbody tr:last-child td {
+            border-bottom: 1px solid black;
+        }
+        .empty-row {
+            height: 20px;
+        }
+        .empty-row td {
+            height: 20px;
         }
         .credit-note-table th {
             background-color: #ffe6e6;
@@ -81,13 +185,27 @@
         .footer {
             display: flex;
             justify-content: space-between;
-            margin-top: 1cm;
+            margin-top: 0.3cm;
+            page-break-inside: avoid;
+            min-height: 3cm;
         }
         .sdc-info {
-            width: 50%;
+            width: 40%;
+            flex-shrink: 0;
+            font-size: 8pt;
+            line-height: 1.1;
+        }
+        .qr-section {
+            width: 20%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
         .totals-table {
-            width: 45%;
+            width: 35%;
+            flex-shrink: 0;
         }
         .totals-table table {
             width: 100%;
@@ -95,7 +213,8 @@
         }
         .totals-table th, .totals-table td {
             border: 1px solid black;
-            padding: 8px;
+            padding: 4px;
+            font-size: 8pt;
         }
         .totals-table td:last-child {
             text-align: right;
@@ -110,12 +229,16 @@
         }
         .qr-placeholder {
             border: 1px solid black;
-            width: 3cm;
-            height: 3cm;
+            width: 70px;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 0.5cm;
+        }
+        .qr-placeholder img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
         }
         .underline {
             border-bottom: 1px solid black;
@@ -129,41 +252,74 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure footer stays together */
+        .footer-container {
+            page-break-inside: avoid;
+            margin-top: 0.3cm;
+            clear: both;
+        }
+        
+        /* For long item lists, allow items to flow naturally */
+        .items-section {
+            margin-bottom: 0.5cm;
+            overflow: visible;
+        }
+        
+        /* Force footer to a new page if needed for many items */
+        .items-table + .footer-container {
+            page-break-before: auto;
+        }
+        
         @media print {
-            body { margin: 0; }
+            body { margin: 1cm; }
+            
+            /* Ensure header doesn't repeat */
+            .header { 
+                page-break-after: avoid;
+            }
+            
+            /* Keep totals and SDC info together */
+            .footer {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="company-info">
-            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
-            
-            <div style="margin-top: 0.5cm;">
-                <strong style="font-size: 14pt;">{{ company_name }}</strong><br>
+        <!-- Left: Company Logo -->
+        <div class="header-left">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756252225/rra_pqu5rq.png" alt="Company Logo" class="company-logo">
+        </div>
+        
+        <!-- Center: Company Name and Details -->
+        <div class="header-center">
+            <div class="company-name">{{ company_name }}</div>
+            <div class="company-details">
                 {{ company_address }}<br>
-                TEL: {{ company_tel }}<br>
-                EMAIL: {{ company_email }}<br>
-                TIN: {{ company_tin }}<br>
-                CASHIER: {{ cashier }}
+                TEL: {{ company_tel }} EMAIL: {{ company_email }}<br>
+                TIN: {{ company_tin }}
             </div>
         </div>
         
-        <div class="invoice-info">
+        <!-- Right: Rwanda Seal -->
+        <div class="header-right">
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
-            
-            {% if invoice_type == "Credit Note" %}
-            <div class="credit-note-box">
-                <strong style="color: #d32f2f;">CREDIT NOTE NO : {{ invoice_number }}</strong><br><br>
-                Date : {{ invoice_date }}
-            </div>
-            {% else %}
-            <div class="invoice-box">
-                <strong>INVOICE NO : {{ invoice_number }}</strong><br><br>
-                Date : {{ invoice_date }}
-            </div>
-            {% endif %}
         </div>
     </div>
 
@@ -175,103 +331,145 @@
     </div>
     {% endif %}
 
-    <!-- Invoice/Credit Note To -->
-    {% if invoice_type == "Credit Note" %}
-    <div class="credit-note-to">
-        <strong>CREDIT NOTE TO</strong><br>
-        TIN : {{ client_tin }}<br>
-        Name : {{ client_name }}
-    </div>
-    {% else %}
-    <div class="invoice-to">
-        <strong>INVOICE TO</strong><br>
-        TIN : {{ client_tin }}<br>
-        Name : {{ client_name }}
-    </div>
-    {% endif %}
-
-    <!-- Items Table -->
-    <table class="items-table {% if invoice_type == 'Credit Note' %}credit-note-table{% endif %}">
-        <thead>
-            <tr>
-                <th>Item Code</th>
-                <th>Item Description</th>
-                <th>Qty</th>
-                <th>Tax</th>
-                <th>Unit Price</th>
-                <th>{% if invoice_type == "Credit Note" %}Refund Amount{% else %}Total Price{% endif %}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.code }}</td>
-                <td>{{ item.description }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.tax }}</td>
-                <td>{{ item.unit_price }}</td>
-                <td>{{ item.total_price }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Footer Section -->
-    <div class="footer">
-        <div class="sdc-info">
-            Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
-            SDC ID :{{ sdc_id }}<br>
-            RECEIPT NUMBER :         {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
-            Internal Data :<br>
-            {{ vsdc_internal_data | default('N/A') }}<br>
-            Receipt Signature :<br>
-            {{ vsdc_receipt_signature | default('N/A') }}<br>
-            --------------------------------<br>
-            RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
-            Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
-            MRC: {{ mrc }}<br><br>
-            Powered by EBM v2
-            
-            <div class="qr-placeholder">
-                {% if qr_code_path %}
-                <img src="{{ qr_code_path }}" alt="QR Code" style="max-width: 100%; max-height: 100%;">
-                {% else %}
-                QR Code
-                {% endif %}
+    <!-- Invoice/Credit Note To and Details -->
+    <div class="invoice-section">
+        {% if invoice_type == "Credit Note" %}
+        <div class="credit-note-to-section">
+            <div class="credit-note-to-label">CREDIT NOTE TO</div>
+            <div class="credit-note-to">
+                TIN: {{ client_tin }}<br>
+                Name: {{ client_name }}<br>
+                {% if client_phone %}Phone: {{ client_phone }}{% endif %}
             </div>
         </div>
         
-        <div class="totals-table">
-            <table {% if invoice_type == "Credit Note" %}class="credit-totals"{% endif %}>
+        <div class="credit-note-details-section">
+            <div class="credit-note-details-label">CREDIT NOTE DETAILS</div>
+            <div class="credit-note-details">
+                <span style="color: #d32f2f;">CREDIT NOTE NO: {{ invoice_number }}</span><br><br>
+                DATE: {{ invoice_date }}
+            </div>
+        </div>
+        {% else %}
+        <div class="invoice-to-section">
+            <div class="invoice-to-label">INVOICE TO</div>
+            <div class="invoice-to">
+                TIN: {{ client_tin }}<br>
+                Name: {{ client_name }}<br>
+                {% if client_phone %}Phone: {{ client_phone }}{% endif %}
+            </div>
+        </div>
+        
+        <div class="invoice-details-section">
+            <div class="invoice-details-label">INVOICE DETAILS</div>
+            <div class="invoice-details">
+                INVOICE NO: {{ invoice_number }}<br><br>
+                DATE: {{ invoice_date }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Items Table -->
+    <div class="items-section">
+        <table class="items-table {% if invoice_type == 'Credit Note' %}credit-note-table{% endif %}">
+            <thead>
                 <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Refund Total Rwf{% else %}Total Rwf{% endif %}</strong></td>
-                    <td>{{ total_rwf }}</td>
+                    <th>Item Code</th>
+                    <th>Item Description</th>
+                    <th>Qty</th>
+                    <th>Tax</th>
+                    <th>Unit Price</th>
+                    <th>{% if invoice_type == "Credit Note" %}Refund Amount{% else %}Total Price{% endif %}</th>
                 </tr>
-                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
+            </thead>
+            <tbody>
+                {% for item in items %}
                 <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Refund A-EX Rwf{% else %}Total A-EX Rwf{% endif %}</strong></td>
-                    <td>{{ total_aex }}</td>
+                    <td>{{ item.code }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.tax }}</td>
+                    <td>{{ item.unit_price }}</td>
+                    <td>{{ item.total_price }}</td>
                 </tr>
-                {% endif %}
-                <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Refund B-18% Rwf{% else %}Total B-18% Rwf{% endif %}</strong></td>
-                    <td>{{ total_b }}</td>
+                {% endfor %}
+                {% set max_rows = 18 %}
+                {% for i in range(max_rows - items|length) %}
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                 </tr>
-                {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
-                <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax A Rwf{% else %}Total Tax A Rwf{% endif %}</strong></td>
-                    <td>0.00</td>
-                </tr>
-                {% endif %}
-                <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax B Rwf{% else %}Total Tax B Rwf{% endif %}</strong></td>
-                    <td>{{ total_tax_b }}</td>
-                </tr>
-                <tr>
-                    <td><strong>{% if invoice_type == "Credit Note" %}Total Refund Tax Rwf{% else %}Total Tax Rwf{% endif %}</strong></td>
-                    <td>{{ total_tax }}</td>
-                </tr>
-            </table>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer-container no-page-break">
+        <div class="footer">
+            <!-- SDC Information -->
+            <div class="sdc-info">
+                Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
+                SDC ID :{{ sdc_id }}<br>
+                RECEIPT NUMBER : {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
+                Internal Data : {{ vsdc_internal_data | default('N/A') }}<br>
+                Receipt Signature : {{ vsdc_receipt_signature | default('N/A') }}<br>
+                --------------------------------<br>
+                RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
+                Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
+                MRC: {{ mrc }}<br>
+                Powered by EBM v2
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+                <div class="qr-placeholder">
+                    {% if qr_code_path %}
+                    <img src="{{ qr_code_path }}" alt="QR Code">
+                    {% else %}
+                    QR Code
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Totals Table -->
+            <div class="totals-table">
+                <table {% if invoice_type == "Credit Note" %}class="credit-totals"{% endif %}>
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Refund Total Rwf{% else %}Total Rwf{% endif %}</strong></td>
+                        <td>{{ total_rwf }}</td>
+                    </tr>
+                    {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Refund A-EX Rwf{% else %}Total A-EX Rwf{% endif %}</strong></td>
+                        <td>{{ total_aex }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Refund B-18% Rwf{% else %}Total B-18% Rwf{% endif %}</strong></td>
+                        <td>{{ total_b }}</td>
+                    </tr>
+                    {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax A Rwf{% else %}Total Tax A Rwf{% endif %}</strong></td>
+                        <td>0.00</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Refund Tax B Rwf{% else %}Total Tax B Rwf{% endif %}</strong></td>
+                        <td>{{ total_tax_b }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>{% if invoice_type == "Credit Note" %}Total Refund Tax Rwf{% else %}Total Tax Rwf{% endif %}</strong></td>
+                        <td>{{ total_tax }}</td>
+                    </tr>
+                </table>
+            </div>
         </div>
     </div>
 </body>

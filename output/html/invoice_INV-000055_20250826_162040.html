@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice INV-000055</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2cm;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1cm;
+        }
+        .company-info {
+            width: 60%;
+        }
+        .company-logo {
+            max-width: 67%;
+            height: auto;
+        }
+        .invoice-info {
+            width: 35%;
+            text-align: right;
+        }
+        .rwanda-seal {
+            max-width: 50%;
+            height: auto;
+        }
+        .invoice-box {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin-top: 1cm;
+        }
+        .invoice-to {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin: 1cm 0;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1cm 0;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid black;
+            padding: 6px 4px;
+            text-align: left;
+            font-size: 10pt;
+            vertical-align: top;
+        }
+        .items-table th {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            page-break-after: avoid;
+        }
+        .items-table td:nth-child(3), 
+        .items-table td:nth-child(5), 
+        .items-table td:nth-child(6) {
+            text-align: right;
+        }
+        .items-table tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+        /* Allow table to break naturally across pages */
+        .items-table thead {
+            display: table-header-group;
+        }
+        
+        .items-table tbody {
+            display: table-row-group;
+        }
+        
+        /* Ensure long descriptions wrap properly */
+        .items-table td:nth-child(2) {
+            word-wrap: break-word;
+            max-width: 250px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1cm;
+            page-break-inside: avoid;
+            min-height: 6cm;
+        }
+        .sdc-info {
+            width: 50%;
+            flex-shrink: 0;
+        }
+        .totals-table {
+            width: 45%;
+            flex-shrink: 0;
+        }
+        .totals-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals-table th, .totals-table td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+        }
+        .qr-placeholder {
+            border: 1px solid black;
+            width: 3cm;
+            height: 3cm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.5cm;
+        }
+        .underline {
+            border-bottom: 1px solid black;
+            width: 5cm;
+            margin: 5px 0;
+        }
+        .vsdc-details {
+            margin-top: 0.5cm;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+        }
+        .vsdc-signature {
+            font-family: monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure footer stays together */
+        .footer-container {
+            page-break-inside: avoid;
+            margin-top: 2cm;
+            clear: both;
+        }
+        
+        /* For long item lists, allow items to flow naturally */
+        .items-section {
+            margin-bottom: 2cm;
+            overflow: visible;
+        }
+        
+        /* Force footer to a new page if needed for many items */
+        .items-table + .footer-container {
+            page-break-before: auto;
+        }
+        
+        @media print {
+            body { margin: 1cm; }
+            
+            /* Ensure header doesn't repeat */
+            .header { 
+                page-break-after: avoid;
+            }
+            
+            /* Keep totals and SDC info together */
+            .footer {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
+            
+            <div style="margin-top: 0.5cm;">
+                <strong style="font-size: 14pt;">BITS</strong><br>
+                Rwanda, Kigali Sonatube<br>
+                TEL: 0785757324<br>
+                EMAIL: xdelta2500@gmail.com<br>
+                TIN: 944000008<br>
+                CASHIER: admin(944000008)
+            </div>
+        </div>
+        
+        <div class="invoice-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
+            
+            <div class="invoice-box" style="margin-top: 1cm;">
+                <strong>INVOICE NO : INV-000055</strong><br><br>
+                Date : 26-08-2025
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice To -->
+    <div class="invoice-to">
+        <strong>INVOICE TO</strong><br>
+        TIN : 998000003<br>
+        Name : Roviagate
+    </div>
+
+    <!-- Items Table -->
+    <div class="items-section">
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item Code</th>
+                    <th>Item Description</th>
+                    <th>Qty</th>
+                    <th>Tax</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>6958226000000117460</td>
+                    <td>Hot Bread for morning eating</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>200,000.00</td>
+                    <td>200,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>6958226000000093322</td>
+                    <td>15-inch laptop with 8GB RAM, 256GB SSD</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>400,000.00</td>
+                    <td>400,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>6958226000000093344</td>
+                    <td>Bluetooth wireless optical mouse</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>25,000.00</td>
+                    <td>25,000.00</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer-container no-page-break">
+        <div class="footer">
+            <div class="sdc-info">
+                Date :26-08-2025   Time:16:20:35<br>
+                SDC ID :SDC010013744<br>
+                RECEIPT NUMBER :         108/108NS<br>
+                Internal Data :<br>
+                7B2C6JSKEUDFLJAAKEB7HAYHGM<br>
+                Receipt Signature :<br>
+                R4JC6UTRKF2OZGKK<br>
+                --------------------------------<br>
+                RECEIPT NUMBER :              55<br>
+                Date:26-08-2025   Time:26-08-2025 16:20:35<br>
+                MRC: WIS00004019<br><br>
+                Powered by EBM v2
+                <div class="qr-placeholder">
+                    
+                    <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756218037/invoice_qr_codes/invoice_qr_codes/invoice_INV-000055_qr.png" alt="QR Code" style="max-width: 100%; max-height: 100%;">
+                    
+                </div>
+            </div>
+            
+            <div class="totals-table">
+                <table>
+                    <tr>
+                        <td><strong>Total Rwf</strong></td>
+                        <td>625,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total B-18% Rwf</strong></td>
+                        <td>625,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total Tax B Rwf</strong></td>
+                        <td>95,338.98</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Tax Rwf</strong></td>
+                        <td>95,338.98</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

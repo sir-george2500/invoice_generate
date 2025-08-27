@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Invoice {{ invoice_number }}</title>
+    <title>Invoice INV-000059</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,7 +22,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 0.3cm;
+            margin-bottom: 0.5cm;
         }
         .header-left {
             width: 30%;
@@ -56,48 +56,44 @@
             margin: 10px 0;
         }
         .company-details {
-            font-size: 9pt;
-            line-height: 1.2;
-            margin-top: 5px;
+            font-size: 10pt;
+            line-height: 1.3;
+            margin-top: 10px;
         }
         .invoice-section {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin: 0.3cm 0;
+            margin: 0.5cm 0;
         }
         .invoice-to-section {
             width: 45%;
         }
         .invoice-to-label {
             font-weight: bold;
-            margin-bottom: 3px;
-            font-size: 9pt;
+            margin-bottom: 5px;
         }
         .invoice-to {
             border: 1px solid black;
-            padding: 8px;
-            font-size: 9pt;
+            padding: 15px;
         }
         .invoice-details-section {
             width: 45%;
         }
         .invoice-details-label {
             font-weight: bold;
-            margin-bottom: 3px;
+            margin-bottom: 5px;
             text-align: left;
-            font-size: 9pt;
         }
         .invoice-details {
             border: 1px solid black;
-            padding: 8px;
+            padding: 15px;
             text-align: left;
-            font-size: 9pt;
         }
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0.2cm 0;
+            margin: 0.5cm 0;
             table-layout: fixed;
             page-break-inside: avoid;
         }
@@ -141,17 +137,10 @@
             width: 14%;
             text-align: right;
         }
+
+        /* remove the broken border rules and keep grid look */
         .items-table tbody tr {
             height: 20px;
-            border: none;
-        }
-        .items-table tbody td {
-            border-top: none;
-            border-bottom: none;
-            height: 20px;
-        }
-        .items-table tbody tr:last-child td {
-            border-bottom: 1px solid black;
         }
         .empty-row {
             height: 20px;
@@ -159,18 +148,17 @@
         .empty-row td {
             height: 20px;
         }
+
         .footer {
             display: flex;
             justify-content: space-between;
-            margin-top: 0.3cm;
+            margin-top: 1cm;
             page-break-inside: avoid;
-            min-height: 3cm;
+            min-height: 6cm;
         }
         .sdc-info {
             width: 40%;
             flex-shrink: 0;
-            font-size: 8pt;
-            line-height: 1.1;
         }
         .qr-section {
             width: 20%;
@@ -190,23 +178,22 @@
         }
         .totals-table th, .totals-table td {
             border: 1px solid black;
-            padding: 4px;
-            font-size: 8pt;
+            padding: 8px;
         }
         .totals-table td:last-child {
             text-align: right;
         }
         .qr-placeholder {
             border: 1px solid black;
-            width: 70px;
-            height: 70px;
+            width: 88px;
+            height: 88px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .qr-placeholder img {
-            width: 70px;
-            height: 70px;
+            width: 88px;
+            height: 88px;
             object-fit: contain;
         }
         .underline {
@@ -242,7 +229,7 @@
         /* Ensure footer stays together */
         .footer-container {
             page-break-inside: avoid;
-            margin-top: 0.3cm;
+            margin-top: 2cm;
             clear: both;
         }
         
@@ -276,22 +263,17 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <!-- Left: Company Logo -->
         <div class="header-left">
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756252225/rra_pqu5rq.png" alt="Company Logo" class="company-logo">
         </div>
-        
-        <!-- Center: Company Name and Details -->
         <div class="header-center">
-            <div class="company-name">{{ company_name }}</div>
+            <div class="company-name">BITS</div>
             <div class="company-details">
-                {{ company_address }}<br>
-                TEL: {{ company_tel }} EMAIL: {{ company_email }}<br>
-                TIN: {{ company_tin }}
+                Rwanda, Kigali Sonatube<br>
+                TEL: 0785757324 EMAIL: xdelta2500@gmail.com<br>
+                TIN: 944000008
             </div>
         </div>
-        
-        <!-- Right: Rwanda Seal -->
         <div class="header-right">
             <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
         </div>
@@ -302,17 +284,17 @@
         <div class="invoice-to-section">
             <div class="invoice-to-label">INVOICE TO</div>
             <div class="invoice-to">
-                TIN: {{ client_tin }}<br>
-                Name: {{ client_name }}<br>
-                {% if client_phone %}Phone: {{ client_phone }}{% endif %}
+                TIN: 998000003<br>
+                Name: Roviagate<br>
+                
             </div>
         </div>
         
         <div class="invoice-details-section">
             <div class="invoice-details-label">INVOICE DETAILS</div>
             <div class="invoice-details">
-                INVOICE NO: {{ invoice_number }}<br><br>
-                DATE: {{ invoice_date }}
+                INVOICE NO: INV-000059<br><br>
+                DATE: 27-08-2025
             </div>
         </div>
     </div>
@@ -331,27 +313,96 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in items %}
+                
                 <tr>
-                    <td>{{ item.code }}</td>
-                    <td>{{ item.description }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.tax }}</td>
-                    <td>{{ item.unit_price }}</td>
-                    <td>{{ item.total_price }}</td>
+                    <td>6958226000000117460</td>
+                    <td>Hot Bread for morning eating</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>200,000.00</td>
+                    <td>200,000.00</td>
                 </tr>
-                {% endfor %}
-                {% set max_rows = 18 %}
-                {% for i in range(max_rows - items|length) %}
+                
+                <tr>
+                    <td>6958226000000093333</td>
+                    <td>128GB storage, dual camera</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>500,000.00</td>
+                    <td>500,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>6958226000000093344</td>
+                    <td>Bluetooth wireless optical mouse</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>25,000.00</td>
+                    <td>25,000.00</td>
+                </tr>
+                
+                
+                
                 <tr class="empty-row">
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
                 </tr>
-                {% endfor %}
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                
             </tbody>
         </table>
     </div>
@@ -359,62 +410,33 @@
     <!-- Footer Section -->
     <div class="footer-container no-page-break">
         <div class="footer">
-            <!-- SDC Information -->
             <div class="sdc-info">
-                Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
-                SDC ID :{{ sdc_id }}<br>
-                RECEIPT NUMBER : {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
-                Internal Data : {{ vsdc_internal_data | default('N/A') }}<br>
-                Receipt Signature : {{ vsdc_receipt_signature | default('N/A') }}<br>
+                Date :27-08-2025   Time:03:25:04<br>
+                SDC ID :SDC010013744<br>
+                RECEIPT NUMBER : 112/112NS<br>
+                Internal Data : WE4QIP4DZVMALJU2LTEACTKNRI<br>
+                Receipt Signature : X4IOUPEYBKLJRF2F<br>
                 --------------------------------<br>
-                RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
-                Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
-                MRC: {{ mrc }}<br>
+                RECEIPT NUMBER : 59<br>
+                Date:27-08-2025   Time:27-08-2025 03:25:04<br>
+                MRC: WIS00004019<br><br>
                 Powered by EBM v2
             </div>
-
-            <!-- QR Code Section -->
             <div class="qr-section">
                 <div class="qr-placeholder">
-                    {% if qr_code_path %}
-                    <img src="{{ qr_code_path }}" alt="QR Code">
-                    {% else %}
-                    QR Code
-                    {% endif %}
+                    
+                    <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756257906/invoice_qr_codes/invoice_qr_codes/invoice_INV-000059_qr.png" alt="QR Code">
+                    
                 </div>
             </div>
-            
-            <!-- Totals Table -->
             <div class="totals-table">
                 <table>
-                    <tr>
-                        <td><strong>Total Rwf</strong></td>
-                        <td>{{ total_rwf }}</td>
-                    </tr>
-                    {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
-                    <tr>
-                        <td><strong>Total A-EX Rwf</strong></td>
-                        <td>{{ total_aex }}</td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td><strong>Total B-18% Rwf</strong></td>
-                        <td>{{ total_b }}</td>
-                    </tr>
-                    {% if total_aex and total_aex != "0.00" and total_aex != "0" %}
-                    <tr>
-                        <td><strong>Total Tax A Rwf</strong></td>
-                        <td>0.00</td>
-                    </tr>
-                    {% endif %}
-                    <tr>
-                        <td><strong>Total Tax B Rwf</strong></td>
-                        <td>{{ total_tax_b }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Total Tax Rwf</strong></td>
-                        <td>{{ total_tax }}</td>
-                    </tr>
+                    <tr><td><strong>Total Rwf</strong></td><td>725,000.00</td></tr>
+                    
+                    <tr><td><strong>Total B-18% Rwf</strong></td><td>725,000.00</td></tr>
+                    
+                    <tr><td><strong>Total Tax B Rwf</strong></td><td>110,593.22</td></tr>
+                    <tr><td><strong>Total Tax Rwf</strong></td><td>110,593.22</td></tr>
                 </table>
             </div>
         </div>

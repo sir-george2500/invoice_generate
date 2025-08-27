@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice TEST-001</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2cm;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1cm;
+        }
+        .company-info {
+            width: 60%;
+        }
+        .company-logo {
+            max-width: 67%;
+            height: auto;
+        }
+        .invoice-info {
+            width: 35%;
+            text-align: right;
+        }
+        .rwanda-seal {
+            max-width: 50%;
+            height: auto;
+        }
+        .invoice-box {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin-top: 1cm;
+        }
+        .invoice-to {
+            border: 1px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin: 1cm 0;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1cm 0;
+            page-break-inside: avoid;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid black;
+            padding: 6px 4px;
+            text-align: left;
+            font-size: 10pt;
+            vertical-align: top;
+        }
+        .items-table th {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            page-break-after: avoid;
+        }
+        .items-table td:nth-child(3), 
+        .items-table td:nth-child(5), 
+        .items-table td:nth-child(6) {
+            text-align: right;
+        }
+        .items-table tbody tr {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure long descriptions wrap properly */
+        .items-table td:nth-child(2) {
+            word-wrap: break-word;
+            max-width: 250px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1cm;
+            page-break-inside: avoid;
+            min-height: 6cm;
+        }
+        .sdc-info {
+            width: 50%;
+            flex-shrink: 0;
+        }
+        .totals-table {
+            width: 45%;
+            flex-shrink: 0;
+        }
+        .totals-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals-table th, .totals-table td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+        }
+        .qr-placeholder {
+            border: 1px solid black;
+            width: 3cm;
+            height: 3cm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.5cm;
+        }
+        .underline {
+            border-bottom: 1px solid black;
+            width: 5cm;
+            margin: 5px 0;
+        }
+        .vsdc-details {
+            margin-top: 0.5cm;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+        }
+        .vsdc-signature {
+            font-family: monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure footer stays together */
+        .footer-container {
+            page-break-inside: avoid;
+            margin-top: 2cm;
+        }
+        
+        /* For long item lists, allow items to flow naturally */
+        .items-section {
+            margin-bottom: 2cm;
+        }
+        
+        @media print {
+            body { margin: 1cm; }
+            
+            /* Ensure header doesn't repeat */
+            .header { 
+                page-break-after: avoid;
+            }
+            
+            /* Keep totals and SDC info together */
+            .footer {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="company-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392252/company_logo_qg482k.png" alt="Company Logo" class="company-logo">
+            
+            <div style="margin-top: 0.5cm;">
+                <strong style="font-size: 14pt;">Test Company Ltd</strong><br>
+                Kigali, Rwanda<br>
+                TEL: 0785757324<br>
+                EMAIL: test@company.com<br>
+                TIN: 944000008<br>
+                CASHIER: admin(944000008)
+            </div>
+        </div>
+        
+        <div class="invoice-info">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
+            
+            <div class="invoice-box" style="margin-top: 1cm;">
+                <strong>INVOICE NO : TEST-001</strong><br><br>
+                Date : 26-08-2025
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice To -->
+    <div class="invoice-to">
+        <strong>INVOICE TO</strong><br>
+        TIN : 998000003<br>
+        Name : Test Client
+    </div>
+
+    <!-- Items Table -->
+    <div class="items-section">
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item Code</th>
+                    <th>Item Description</th>
+                    <th>Qty</th>
+                    <th>Tax</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>RW1NTXU000000001</td>
+                    <td>Test Item 1 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>10,000.00</td>
+                    <td>10,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000002</td>
+                    <td>Test Item 2 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>2.00</td>
+                    <td>B</td>
+                    <td>20,000.00</td>
+                    <td>20,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000003</td>
+                    <td>Test Item 3 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>3.00</td>
+                    <td>B</td>
+                    <td>30,000.00</td>
+                    <td>30,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000004</td>
+                    <td>Test Item 4 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>4.00</td>
+                    <td>B</td>
+                    <td>40,000.00</td>
+                    <td>40,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000005</td>
+                    <td>Test Item 5 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>5.00</td>
+                    <td>B</td>
+                    <td>50,000.00</td>
+                    <td>50,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000006</td>
+                    <td>Test Item 6 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>6.00</td>
+                    <td>B</td>
+                    <td>60,000.00</td>
+                    <td>60,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000007</td>
+                    <td>Test Item 7 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>7.00</td>
+                    <td>B</td>
+                    <td>70,000.00</td>
+                    <td>70,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000008</td>
+                    <td>Test Item 8 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>8.00</td>
+                    <td>B</td>
+                    <td>80,000.00</td>
+                    <td>80,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000009</td>
+                    <td>Test Item 9 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>9.00</td>
+                    <td>B</td>
+                    <td>90,000.00</td>
+                    <td>90,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000010</td>
+                    <td>Test Item 10 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>10.00</td>
+                    <td>B</td>
+                    <td>100,000.00</td>
+                    <td>100,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000011</td>
+                    <td>Test Item 11 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>11.00</td>
+                    <td>B</td>
+                    <td>110,000.00</td>
+                    <td>110,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000012</td>
+                    <td>Test Item 12 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>12.00</td>
+                    <td>B</td>
+                    <td>120,000.00</td>
+                    <td>120,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000013</td>
+                    <td>Test Item 13 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>13.00</td>
+                    <td>B</td>
+                    <td>130,000.00</td>
+                    <td>130,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000014</td>
+                    <td>Test Item 14 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>14.00</td>
+                    <td>B</td>
+                    <td>140,000.00</td>
+                    <td>140,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000015</td>
+                    <td>Test Item 15 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>15.00</td>
+                    <td>B</td>
+                    <td>150,000.00</td>
+                    <td>150,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000016</td>
+                    <td>Test Item 16 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>16.00</td>
+                    <td>B</td>
+                    <td>160,000.00</td>
+                    <td>160,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000017</td>
+                    <td>Test Item 17 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>17.00</td>
+                    <td>B</td>
+                    <td>170,000.00</td>
+                    <td>170,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000018</td>
+                    <td>Test Item 18 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>18.00</td>
+                    <td>B</td>
+                    <td>180,000.00</td>
+                    <td>180,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000019</td>
+                    <td>Test Item 19 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>19.00</td>
+                    <td>B</td>
+                    <td>190,000.00</td>
+                    <td>190,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000020</td>
+                    <td>Test Item 20 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>20.00</td>
+                    <td>B</td>
+                    <td>200,000.00</td>
+                    <td>200,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000021</td>
+                    <td>Test Item 21 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>21.00</td>
+                    <td>B</td>
+                    <td>210,000.00</td>
+                    <td>210,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000022</td>
+                    <td>Test Item 22 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>22.00</td>
+                    <td>B</td>
+                    <td>220,000.00</td>
+                    <td>220,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000023</td>
+                    <td>Test Item 23 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>23.00</td>
+                    <td>B</td>
+                    <td>230,000.00</td>
+                    <td>230,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000024</td>
+                    <td>Test Item 24 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>24.00</td>
+                    <td>B</td>
+                    <td>240,000.00</td>
+                    <td>240,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000025</td>
+                    <td>Test Item 25 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>25.00</td>
+                    <td>B</td>
+                    <td>250,000.00</td>
+                    <td>250,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000026</td>
+                    <td>Test Item 26 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>26.00</td>
+                    <td>B</td>
+                    <td>260,000.00</td>
+                    <td>260,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000027</td>
+                    <td>Test Item 27 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>27.00</td>
+                    <td>B</td>
+                    <td>270,000.00</td>
+                    <td>270,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000028</td>
+                    <td>Test Item 28 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>28.00</td>
+                    <td>B</td>
+                    <td>280,000.00</td>
+                    <td>280,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000029</td>
+                    <td>Test Item 29 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>29.00</td>
+                    <td>B</td>
+                    <td>290,000.00</td>
+                    <td>290,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>RW1NTXU000000030</td>
+                    <td>Test Item 30 - This is a detailed description that might be quite long to test text wrapping capabilities in the template</td>
+                    <td>30.00</td>
+                    <td>B</td>
+                    <td>300,000.00</td>
+                    <td>300,000.00</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer-container no-page-break">
+        <div class="footer">
+            <div class="sdc-info">
+                Date :26-08-2025   Time:15:41:27<br>
+                SDC ID :SDC010013744<br>
+                RECEIPT NUMBER :         108/108NS<br>
+                Internal Data :<br>
+                TEST-INTERNAL-DATA<br>
+                Receipt Signature :<br>
+                TEST-SIGNATURE<br>
+                --------------------------------<br>
+                RECEIPT NUMBER :              1<br>
+                Date:26-08-2025   Time:26-08-2025 15:41:27<br>
+                MRC: WIS00004019<br><br>
+                Powered by EBM v2
+                <div class="qr-placeholder">
+                    
+                    QR Code
+                    
+                </div>
+            </div>
+            
+            <div class="totals-table">
+                <table>
+                    <tr>
+                        <td><strong>Total Rwf</strong></td>
+                        <td>5,000,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total B-18% Rwf</strong></td>
+                        <td>5,000,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total Tax B Rwf</strong></td>
+                        <td>762,711.86</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Tax Rwf</strong></td>
+                        <td>762,711.86</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
