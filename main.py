@@ -146,6 +146,19 @@ async def handle_zoho_webhook(request: Request):
                     # ADD: Detailed VSDC response logging
                     log_vsdc_response_detailed(ebm_response, "invoice")
                     
+                    # Log VSDC data for QR code generation
+                    data_section = ebm_response.get("data", {})
+                    logger.info(f"VSDC QR Data Available:")
+                    logger.info(f"  - Internal Data: '{data_section.get('intrlData', 'MISSING')}'")
+                    logger.info(f"  - Receipt Signature: '{data_section.get('rcptSign', 'MISSING')}'")
+                    logger.info(f"  - Receipt Number: '{data_section.get('rcptNo', 'MISSING')}'")
+                    logger.info(f"  - SDC ID: '{data_section.get('sdcId', 'MISSING')}'")
+                    
+                    # Check if we have enough data for URL-based QR codes
+                    has_internal_data = bool(data_section.get('intrlData', '').strip())
+                    has_signature = bool(data_section.get('rcptSign', '').strip())
+                    logger.info(f"QR URL Generation Possible: {has_internal_data or has_signature}")
+                    
                 except ValueError as e:
                     logger.error(f"Invalid JSON response from VSDC: {response.text}")
                     raise HTTPException(
@@ -377,6 +390,18 @@ async def handle_zoho_credit_note_webhook(request: Request):
                 
                 # ADD: Detailed VSDC response logging for credit notes
                 log_vsdc_response_detailed(ebm_response, "credit_note")
+                
+                # Log VSDC data for QR code generation (credit notes)
+                data_section = ebm_response.get("data", {})
+                logger.info(f"VSDC Credit Note QR Data Available:")
+                logger.info(f"  - Internal Data: '{data_section.get('intrlData', 'MISSING')}'")
+                logger.info(f"  - Receipt Signature: '{data_section.get('rcptSign', 'MISSING')}'")
+                logger.info(f"  - Receipt Number: '{data_section.get('rcptNo', 'MISSING')}'")
+                
+                # Check if we have enough data for URL-based QR codes
+                has_internal_data = bool(data_section.get('intrlData', '').strip())
+                has_signature = bool(data_section.get('rcptSign', '').strip())
+                logger.info(f"Credit Note QR URL Generation Possible: {has_internal_data or has_signature}")
                 
             except ValueError as e:
                 logger.error(f"Invalid JSON response from VSDC: {response.text}")
@@ -695,6 +720,12 @@ async def test_qr_validation():
         # Sample invoice data for testing
         sample_invoice_data = {
             "client_name": "uwase nicaise",
+            "company_name": "Test Company Ltd",
+            "company_address": "Kigali, Rwanda",
+            "company_tel": "0785757324",
+            "company_email": "test@company.com",
+            "company_tin": "944000008",
+            "client_tin": "998000003",
             "invoice_date": "25-08-2025",
             "invoice_time": "15:42:17",
             "sdc_id": "SDC010013744",
@@ -704,7 +735,21 @@ async def test_qr_validation():
             "vsdc_receipt_signature": "IOSO-NK3N-CTNT-7BBF",
             "vsdc_receipt_date": "00:00:00",
             "mrc": "WIS00004019",
-            "invoice_number": "91"
+            "invoice_number": "91",
+            "total_rwf": "100,000.00",
+            "total_b": "100,000.00",
+            "total_tax_b": "15,254.24",
+            "total_tax": "15,254.24",
+            "items": [
+                {
+                    "code": "RW1NTXU00001",
+                    "description": "Test Service",
+                    "quantity": "1.00",
+                    "tax": "B",
+                    "unit_price": "100,000.00",
+                    "total_price": "100,000.00"
+                }
+            ]
         }
         
         # Generate and validate QR code
@@ -734,6 +779,79 @@ async def test_qr_validation():
             status_code=500,
             content={
                 "message": "QR validation test failed",
+                "error": str(e)
+            }
+        )
+
+@app.post("/test/qr-content")
+async def test_qr_content():
+    """Test QR code content generation without uploading"""
+    try:
+        # Sample invoice data
+        sample_invoice_data = {
+            "client_name": "CODACE",
+            "company_name": "JEAN MARIE NTIGINAMA",
+            "company_address": "Gasabo MUHIMA NYARUGENGE KIGALI CITY",
+            "company_tel": "0788672640",
+            "company_email": "ntiginamajm@gmail.com",
+            "company_tin": "101412555",
+            "client_tin": "101407029",
+            "invoice_date": "11/03/2024",
+            "invoice_time": "13:00:03",
+            "sdc_id": "SDC012003144",
+            "vsdc_receipt_no": "22",
+            "receipt_number": "22",
+            "vsdc_internal_data": "YK5Z-DZBT-SPLC-YLCA-LR3N-BZDM-QM",
+            "vsdc_receipt_signature": "ZPKR-T6GD-55DG-TZBM",
+            "vsdc_receipt_date": "11/03/2024 13:00:03",
+            "mrc": "WIS00045236",
+            "invoice_number": "22",
+            "total_rwf": "320,073",
+            "total_aex": "0",
+            "total_b": "0",
+            "total_tax_a": "0",
+            "total_tax_b": "0",
+            "total_tax": "0",
+            "items": [
+                {
+                    "code": "RW3NTXNOX00001",
+                    "description": "TRANSPORT SERVICES",
+                    "quantity": "1",
+                    "tax": "D",
+                    "unit_price": "320,073",
+                    "total_price": "320,073"
+                }
+            ]
+        }
+        
+        # Generate QR content
+        if vsdc_service.qr_generator:
+            qr_content = vsdc_service.qr_generator.generate_invoice_qr_data_text_fallback(sample_invoice_data)
+            
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": "QR code content generated",
+                    "qr_content": qr_content,
+                    "content_length": len(qr_content),
+                    "sample_data_used": sample_invoice_data
+                }
+            )
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "message": "QR generator not available - check Cloudinary configuration",
+                    "cloudinary_configured": settings.is_cloudinary_configured()
+                }
+            )
+        
+    except Exception as e:
+        logger.error(f"Error in QR content test: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "QR content test failed",
                 "error": str(e)
             }
         )

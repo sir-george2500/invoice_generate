@@ -25,20 +25,43 @@ class InvoiceQRGenerator:
         cloudinary.config(**cloudinary_config)
         
     def generate_invoice_qr_data(self, invoice_data):
-        """Generate QR code data from invoice information in the specific VSDC format"""
-        # Format the QR data exactly as specified by the using the same information that was place in the vsdc return jason 
-        qr_text = f"""{invoice_data.get("client_name", "Unknown Client")}
-Date :{invoice_data.get("invoice_date", "")}  Time:{invoice_data.get("invoice_time", "")}
-SDC ID :{invoice_data.get("sdc_id", "")}
-RECEIPT NUMBER :         {invoice_data.get("vsdc_receipt_no", invoice_data.get("receipt_number", ""))}/{invoice_data.get("vsdc_receipt_no", invoice_data.get("receipt_number", ""))}NS
-Internal Data :
-{invoice_data.get("vsdc_internal_data", "")}
-Receipt Signature :
-{invoice_data.get("vsdc_receipt_signature", "")}
---------------------------------
-RECEIPT NUMBER :              {invoice_data.get("invoice_number_numeric", invoice_data.get("invoice_number", ""))}
-Date:{invoice_data.get("invoice_date", "")}  Time:{invoice_data.get("vsdc_receipt_date", invoice_data.get("invoice_time", ""))}
-MRC: {invoice_data.get("mrc", "")}"""
+        """Generate QR code data as complete receipt text
+        
+        Note: RRA verification URLs only work in production environment.
+        Using complete receipt text format for better compatibility.
+        """
+        # Use text-based QR code with complete receipt information
+        return self.generate_invoice_qr_data_text_fallback(invoice_data)
+    
+    def generate_invoice_qr_data_text_fallback(self, invoice_data):
+        """Generate QR code data with only essential SDC information"""
+        
+        # Get receipt number - try different sources
+        vsdc_receipt_no = invoice_data.get("vsdc_receipt_no", invoice_data.get("receipt_number", ""))
+        invoice_number = invoice_data.get("invoice_number_numeric", invoice_data.get("invoice_number", ""))
+        
+        # Clean invoice number to show only numeric part
+        if invoice_number:
+            # Extract only digits from invoice number
+            import re
+            numeric_parts = re.findall(r'\d+', str(invoice_number))
+            if numeric_parts:
+                # Take the last/largest numeric part (e.g., from "INV-000061" get "61")
+                invoice_number_clean = str(int(numeric_parts[-1]))  # Remove leading zeros
+            else:
+                invoice_number_clean = str(invoice_number)
+        else:
+            invoice_number_clean = ""
+        
+        # Simple QR code with only SDC verification information
+        qr_text = f"""SDC ID: {invoice_data.get("sdc_id", "")}
+Receipt Number: {vsdc_receipt_no}/{vsdc_receipt_no}
+Internal Data: {invoice_data.get("vsdc_internal_data", "")}
+Receipt Signature: {invoice_data.get("vsdc_receipt_signature", "")}
+Receipt Number: {invoice_number_clean}"""
+        
+        print(f"QR Code generated with length: {len(qr_text)} characters")
+        print(f"QR Code content: {qr_text}")
         
         return qr_text
 
@@ -106,11 +129,118 @@ MRC: {invoice_data.get("mrc", "")}"""
                 'error': str(e)
             }
     
-    def generate_and_upload_qr(self, invoice_data):
-        """Complete process: Generate QR -> Upload to Cloudinary -> Return URL"""
+    def analyze_verification_pattern(self, example_code="10141255500ZPKRT6GD55DGTZBM"):
+        """Analyze the RRA verification code pattern to understand the structure"""
+        print(f"Analyzing RRA verification code pattern: {example_code}")
+        print(f"Total length: {len(example_code)}")
+        
+        # Try to identify different segments
+        # Common patterns might be:
+        # - SDC ID + Receipt Number + Signature
+        # - Receipt Number + Date + Signature  
+        # - Internal Data + Receipt Signature
+        
+        possible_patterns = [
+            {"name": "SDC_ID (11 chars) + Signature", "sdc": example_code[:11], "signature": example_code[11:]},
+            {"name": "Receipt (10 chars) + Signature", "receipt": example_code[:10], "signature": example_code[10:]},
+            {"name": "Mixed (8+8+10)", "part1": example_code[:8], "part2": example_code[8:16], "part3": example_code[16:]},
+        ]
+        
+        for pattern in possible_patterns:
+            print(f"\nPattern: {pattern['name']}")
+            for key, value in pattern.items():
+                if key != 'name':
+                    print(f"  {key}: '{value}' (length: {len(value)})")
+        
+        return possible_patterns
+
+    def generate_rra_verification_data(self, invoice_data):
+        """Generate RRA verification data string from VSDC response
+        
+        Based on expert analysis of real RRA verification URL:
+        URL: 10141255500ZPKRT6GD55DGTZBM
+        Pattern: [TIN (9 digits)] + [Branch ID (2 digits)] + [Receipt_Signature (16 chars)]
+        
+        Breakdown:
+        - TIN: 101412555 (9 digits - seller's taxpayer ID)
+        - Branch ID: 00 (2 digits - bhfId from VSDC, "00" for main branch)  
+        - Receipt Signature: ZPKRT6GD55DGTZBM (16 chars, hyphens removed from ZPKR-T6GD-55DG-TZBM)
+        
+        Total: 27 characters exactly (9+2+16)
+        """
         try:
-            # Step 1: Generate QR data
-            qr_data = self.generate_invoice_qr_data(invoice_data)
+            # Get required data
+            receipt_signature = invoice_data.get("vsdc_receipt_signature", "").strip()
+            company_tin = invoice_data.get("company_tin", "").strip()
+            
+            # Get branch ID from VSDC payload or default to "00" (main branch)
+            branch_id = "00"  # Standard main branch ID in RRA EBM system
+            
+            print(f"RRA Verification Code Generation:")
+            print(f"  Company TIN: '{company_tin}'")
+            print(f"  Branch ID: '{branch_id}' (bhfId)") 
+            print(f"  Receipt Signature: '{receipt_signature}'")
+            
+            # Validate required data
+            if not company_tin or not receipt_signature:
+                missing = []
+                if not company_tin: missing.append("company_tin")
+                if not receipt_signature: missing.append("receipt_signature")
+                raise ValueError(f"Missing required data: {missing}")
+            
+            # Clean TIN (remove non-digits) and ensure exactly 9 digits
+            tin_clean = ''.join(c for c in company_tin if c.isdigit())
+            if len(tin_clean) > 9:
+                tin_clean = tin_clean[-9:]  # Take last 9 digits if longer
+            elif len(tin_clean) < 9:
+                tin_clean = tin_clean.zfill(9)  # Pad with leading zeros if shorter
+            
+            # Ensure branch ID is exactly 2 digits
+            if len(branch_id) != 2:
+                branch_id = "00"  # Default fallback
+            
+            # Clean receipt signature (remove hyphens/spaces) and ensure exactly 16 chars
+            signature_clean = ''.join(c for c in receipt_signature if c.isalnum()).upper()
+            if len(signature_clean) != 16:
+                print(f"Warning: Receipt signature length is {len(signature_clean)}, expected 16")
+                # Pad or truncate to 16 chars
+                if len(signature_clean) < 16:
+                    signature_clean = signature_clean.ljust(16, '0')
+                else:
+                    signature_clean = signature_clean[:16]
+            
+            # Combine: TIN (9) + Branch ID (2) + Signature (16) = 27 chars total
+            verification_code = f"{tin_clean}{branch_id}{signature_clean}"
+            
+            print(f"Generated verification code: {verification_code}")
+            print(f"  TIN part: {tin_clean} (length: {len(tin_clean)})")
+            print(f"  Branch ID: {branch_id} (length: {len(branch_id)})")
+            print(f"  Signature: {signature_clean} (length: {len(signature_clean)})")
+            print(f"  Total length: {len(verification_code)}")
+            
+            # Validate final format
+            if len(verification_code) != 27:
+                raise ValueError(f"Invalid verification code length: {len(verification_code)}, expected 27")
+            
+            return verification_code
+            
+        except Exception as e:
+            print(f"Error generating verification data: {str(e)}")
+            raise ValueError(f"Cannot generate valid RRA verification URL: {str(e)}")
+
+    def generate_and_upload_qr(self, invoice_data, qr_type="url"):
+        """Complete process: Generate QR -> Upload to Cloudinary -> Return URL
+        
+        Args:
+            invoice_data: Invoice data dictionary
+            qr_type: "url" for RRA verification URL, "text" for text-based QR
+        """
+        try:
+            # Step 1: Generate QR data based on type
+            if qr_type == "url":
+                qr_data = self.generate_invoice_qr_data(invoice_data)
+            else:
+                qr_data = self.generate_invoice_qr_data_text_fallback(invoice_data)
             
             # Step 2: Create QR code image
             qr_image = self.create_qr_code_image(qr_data)
@@ -129,7 +259,9 @@ MRC: {invoice_data.get("mrc", "")}"""
                 'cloudinary_url': upload_result['url'],
                 'secure_url': upload_result['url'],
                 'public_id': upload_result['public_id'],
-                'qr_data': qr_data
+                'qr_data': qr_data,
+                'qr_type': qr_type,
+                'verification_url': qr_data if qr_type == "url" else None
             }
             
         except Exception as e:

@@ -85,30 +85,54 @@ class PayloadTransformer:
                 raise ValueError(f"Item {idx + 1} must have a valid rate/price")
 
     def extract_business_info(self, invoice_data: dict) -> tuple:
-        """Extract business name and address from Zoho invoice data"""
-        # Try to get organization/company info from various locations
-        business_name = "Unknown Business"
-        business_address = "Unknown Address"
+        """Extract business name and address from Zoho invoice data using custom fields"""
+        # Try to get organization/company info from custom fields first
+        custom_field_hash = invoice_data.get("custom_field_hash", {})
         
-        # Method 1: Check if there's organization info in the invoice
-        if 'organization_name' in invoice_data:
-            business_name = invoice_data.get('organization_name')
+        # Extract from custom fields
+        business_name = custom_field_hash.get("cf_organizationname", "")
+        business_address = custom_field_hash.get("cf_seller_company_address", "")
         
-        # Method 2: Check billing address or company details
-        billing_address = invoice_data.get('billing_address', {})
-        if billing_address.get('attention'):
-            business_name = billing_address.get('attention')
+        # Fallback to custom_fields array if hash is missing
+        if not business_name or not business_address:
+            for field in invoice_data.get("custom_fields", []):
+                api_name = field.get("api_name")
+                value = field.get("value", "")
+                
+                if api_name == "cf_organizationname" and not business_name:
+                    business_name = value
+                elif api_name == "cf_seller_company_address" and not business_address:
+                    business_address = value
         
-        # Method 3: You might need to get this from your Zoho organization settings
-        # For now, we'll use a fallback that you can configure
-        # TODO: Replace with actual business info from Zoho organization API
-        business_name = invoice_data.get('company_name', business_name)
+        # Additional fallback methods
+        if not business_name:
+            # Method 1: Check if there's organization info in the invoice
+            if 'organization_name' in invoice_data:
+                business_name = invoice_data.get('organization_name')
+            
+            # Method 2: Check billing address or company details
+            billing_address = invoice_data.get('billing_address', {})
+            if billing_address.get('attention'):
+                business_name = billing_address.get('attention')
+            
+            # Method 3: Use company_name field
+            business_name = invoice_data.get('company_name', "Unknown Business")
         
-        # Extract address
-        if billing_address.get('address'):
-            business_address = billing_address.get('address')
-        elif billing_address.get('street'):
-            business_address = billing_address.get('street')
+        # Additional address fallback
+        if not business_address:
+            billing_address = invoice_data.get('billing_address', {})
+            if billing_address.get('address'):
+                business_address = billing_address.get('address')
+            elif billing_address.get('street'):
+                business_address = billing_address.get('street')
+            else:
+                business_address = "Unknown Address"
+        
+        # Clean up the values
+        business_name = business_name.strip() if business_name else "Unknown Business"
+        business_address = business_address.strip() if business_address else "Unknown Address"
+        
+        logger.info(f"Extracted business info - Name: {business_name}, Address: {business_address}")
         
         return business_name, business_address
 

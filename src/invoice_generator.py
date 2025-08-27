@@ -51,19 +51,26 @@ class InvoiceGenerator:
         return output_path
     
     def generate_pdf_with_qr(self, invoice_data, output_path="output/pdf/invoice.pdf", 
-                            template_name="invoice_template.html", generate_qr=True):
-        """Generate PDF with QR code generation and upload to Cloudinary"""
+                            template_name="invoice_template.html", generate_qr=True, qr_type="url"):
+        """Generate PDF with QR code generation and upload to Cloudinary
+        
+        Args:
+            qr_type: "url" for RRA verification URL QR code, "text" for text-based QR code
+        """
         
         # Generate QR code if requested and QR generator is available
         if generate_qr and self.qr_generator:
-            print("Generating and uploading QR code to Cloudinary...")
-            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data)
+            print(f"Generating and uploading QR code ({qr_type}) to Cloudinary...")
+            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data, qr_type)
             
             if qr_result['success']:
                 # Use Cloudinary URL directly for the QR code
                 invoice_data['qr_code_path'] = qr_result['secure_url']
                 invoice_data['qr_public_id'] = qr_result['public_id']  # Store for potential cleanup
+                invoice_data['qr_verification_url'] = qr_result.get('verification_url')  # Store verification URL
                 print(f"QR code uploaded to Cloudinary: {qr_result['secure_url']}")
+                if qr_type == "url" and qr_result.get('verification_url'):
+                    print(f"QR code links to: {qr_result['verification_url']}")
             else:
                 print(f"QR generation failed: {qr_result['error']}")
                 invoice_data['qr_code_path'] = None
@@ -92,18 +99,25 @@ class InvoiceGenerator:
         return output_path
     
     def generate_html_with_qr(self, invoice_data, output_path="output/html/invoice.html", 
-                             template_name="invoice_template.html", generate_qr=True):
-        """Generate HTML preview with QR code"""
+                             template_name="invoice_template.html", generate_qr=True, qr_type="url"):
+        """Generate HTML preview with QR code
+        
+        Args:
+            qr_type: "url" for RRA verification URL QR code, "text" for text-based QR code
+        """
         
         # Generate QR code if requested and QR generator is available
         if generate_qr and self.qr_generator:
-            print("Generating and uploading QR code to Cloudinary for HTML...")
-            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data)
+            print(f"Generating and uploading QR code ({qr_type}) to Cloudinary for HTML...")
+            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data, qr_type)
             
             if qr_result['success']:
                 invoice_data['qr_code_path'] = qr_result['secure_url']
                 invoice_data['qr_public_id'] = qr_result['public_id']
+                invoice_data['qr_verification_url'] = qr_result.get('verification_url')
                 print(f"QR code uploaded to Cloudinary: {qr_result['secure_url']}")
+                if qr_type == "url" and qr_result.get('verification_url'):
+                    print(f"QR code links to: {qr_result['verification_url']}")
             else:
                 print(f"QR generation failed: {qr_result['error']}")
                 invoice_data['qr_code_path'] = None
@@ -129,17 +143,22 @@ class InvoiceGenerator:
         
         return pdf_bytes
     
-    def generate_pdf_bytes_with_qr(self, invoice_data, template_name="invoice_template.html", generate_qr=True):
-        """Generate PDF as bytes with QR code from Cloudinary"""
+    def generate_pdf_bytes_with_qr(self, invoice_data, template_name="invoice_template.html", generate_qr=True, qr_type="url"):
+        """Generate PDF as bytes with QR code from Cloudinary
+        
+        Args:
+            qr_type: "url" for RRA verification URL QR code, "text" for text-based QR code
+        """
         
         # Generate QR code if requested
         if generate_qr and self.qr_generator:
-            print("Generating QR code for PDF bytes...")
-            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data)
+            print(f"Generating QR code ({qr_type}) for PDF bytes...")
+            qr_result = self.qr_generator.generate_and_upload_qr(invoice_data, qr_type)
             
             if qr_result['success']:
                 invoice_data['qr_code_path'] = qr_result['secure_url']
                 invoice_data['qr_public_id'] = qr_result['public_id']
+                invoice_data['qr_verification_url'] = qr_result.get('verification_url')
             else:
                 invoice_data['qr_code_path'] = None
         

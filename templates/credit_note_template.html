@@ -339,15 +339,15 @@
             <div class="credit-note-to">
                 TIN: {{ client_tin }}<br>
                 Name: {{ client_name }}<br>
-                {% if client_phone %}Phone: {{ client_phone }}{% endif %}
+                {% if client_phone and client_phone.strip() %}Phone: {{ client_phone }}{% endif %}
             </div>
         </div>
         
         <div class="credit-note-details-section">
             <div class="credit-note-details-label">CREDIT NOTE DETAILS</div>
             <div class="credit-note-details">
-                <span style="color: #d32f2f;">CREDIT NOTE NO: {{ invoice_number }}</span><br><br>
-                DATE: {{ invoice_date }}
+                <span style="color: #d32f2f;">CREDIT NOTE NO: {{ invoice_number_numeric | default(invoice_number) }}</span><br>
+                DATE: {{ invoice_date }}  Time:{{ invoice_time }}
             </div>
         </div>
         {% else %}
@@ -356,15 +356,15 @@
             <div class="invoice-to">
                 TIN: {{ client_tin }}<br>
                 Name: {{ client_name }}<br>
-                {% if client_phone %}Phone: {{ client_phone }}{% endif %}
+                {% if client_phone and client_phone.strip() %}Phone: {{ client_phone }}{% endif %}
             </div>
         </div>
         
         <div class="invoice-details-section">
             <div class="invoice-details-label">INVOICE DETAILS</div>
             <div class="invoice-details">
-                INVOICE NO: {{ invoice_number }}<br><br>
-                DATE: {{ invoice_date }}
+                INVOICE NO: {{ invoice_number_numeric | default(invoice_number) }}<br>
+                DATE: {{ invoice_date }}  Time:{{ invoice_time }}
             </div>
         </div>
         {% endif %}
@@ -414,16 +414,16 @@
         <div class="footer">
             <!-- SDC Information -->
             <div class="sdc-info">
-                Date :{{ invoice_date }}   Time:{{ invoice_time }}<br>
-                SDC ID :{{ sdc_id }}<br>
+                Date : {{ invoice_date }}   Time:{{ invoice_time }}<br>
+                SDC ID : {{ sdc_id }}<br>
                 RECEIPT NUMBER : {{ vsdc_receipt_no | default(receipt_number) }}/{{ vsdc_receipt_no | default(receipt_number) }}NS<br>
                 Internal Data : {{ vsdc_internal_data | default('N/A') }}<br>
                 Receipt Signature : {{ vsdc_receipt_signature | default('N/A') }}<br>
                 --------------------------------<br>
                 RECEIPT NUMBER :              {{ invoice_number_numeric }}<br>
-                Date:{{ invoice_date }}   Time:{{ vsdc_receipt_date | default(invoice_time) }}<br>
+                Date : {{ invoice_date }}   Time : {{ vsdc_receipt_date | default(invoice_time) }}<br>
                 MRC: {{ mrc }}<br>
-                Powered by EBM v2
+                CIS VERSION Powered by RRA VSDC EBM2.1
             </div>
 
             <!-- QR Code Section -->

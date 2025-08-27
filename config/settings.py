@@ -60,6 +60,10 @@ class Settings:
     VSDC_SDC_ID = "SDC010053151"
     VSDC_MRC = "WIS00058003"
     
+    # QR Code Configuration
+    QR_CODE_TYPE = os.getenv('QR_CODE_TYPE', 'text')  # 'url' for RRA verification URL (production only), 'text' for text-based
+    RRA_VERIFICATION_BASE_URL = "https://myrra.rra.gov.rw/common/link/ebm/receipt/indexEbmReceiptData"
+    
     @property
     def cloudinary_config(self) -> dict:
         return {

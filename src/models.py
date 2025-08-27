@@ -14,6 +14,7 @@ class Company:
 class Client:
     name: str
     tin: str
+    phone: str = ""
 
 @dataclass
 class InvoiceItem:
@@ -59,6 +60,7 @@ class Invoice:
             'cashier': self.company.cashier,
             'client_name': self.client.name,
             'client_tin': self.client.tin,
+            'client_phone': self.client.phone,
             'invoice_number': self.invoice_number,
             'invoice_date': self.invoice_date,
             'invoice_time': self.invoice_time,

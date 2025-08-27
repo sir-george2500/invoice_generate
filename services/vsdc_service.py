@@ -259,51 +259,79 @@ class VSSDCInvoiceService:
                 cashier=business_info["cashier"]
             )
             
-            # Client information
-            customer_tin = vsdc_payload.get("custTin", "") if vsdc_payload else ""
-            customer_name = "Unknown Customer"
+            # Client information - Extract from Zoho data first, then use VSDC if available
             
+            # Extract customer name from Zoho data
+            customer_name = invoice_data.get("customer_name", "")
+            
+            # If no customer name in main data, try contact_persons
+            if not customer_name and "contact_persons" in invoice_data:
+                contact_persons = invoice_data.get("contact_persons", [])
+                if contact_persons and len(contact_persons) > 0:
+                    customer_name = contact_persons[0].get("name", "")
+            
+            # Final fallback for customer name
+            if not customer_name:
+                if vsdc_payload:
+                    customer_name = str(vsdc_payload.get("custNm", "Unknown Customer"))
+                else:
+                    customer_name = "Unknown Customer"
+            
+            # Extract customer TIN from multiple sources
+            customer_tin = ""
+            
+            # Priority 1: VSDC payload (most processed)
+            if vsdc_payload:
+                customer_tin = vsdc_payload.get("custTin", "")
+            
+            # Priority 2: Zoho custom field hash
             if not customer_tin:
-                # Try multiple fallback sources
                 custom_field_hash = invoice_data.get("custom_field_hash", {})
                 customer_tin = custom_field_hash.get("cf_customer_tin", "")
-                
-                # Additional fallback for credit notes
-                if not customer_tin:
-                    customer_custom_field_hash = invoice_data.get("customer_custom_field_hash", {})
-                    customer_tin = customer_custom_field_hash.get("cf_custtin", "")
-                
-                # Try customer_custom_fields array
-                if not customer_tin:
-                    for field in invoice_data.get("customer_custom_fields", []):
-                        if field.get("api_name") == "cf_custtin":
-                            customer_tin = field.get("value", "")
-                            break
-                
-                # Try custom_fields array for customer TIN
-                if not customer_tin:
-                    for field in invoice_data.get("custom_fields", []):
-                        if field.get("api_name") == "cf_customer_tin":
-                            customer_tin = field.get("value", "")
-                            break
-                
-                # For credit notes, try to extract from referenced invoice
-                if not customer_tin and "creditnote" in zoho_data:
-                    invoices_credited = invoice_data.get("invoices_credited", [])
-                    if invoices_credited and len(invoices_credited) > 0:
-                        logger.info(f"Trying to extract customer TIN from credited invoice data")
             
-            # Get customer name
-            if vsdc_payload:
-                customer_name = str(vsdc_payload.get("custNm", invoice_data.get("customer_name", "Unknown Customer")))
-            else:
-                customer_name = str(invoice_data.get("customer_name", "Unknown Customer"))
+            # Priority 3: Customer custom field hash
+            if not customer_tin:
+                customer_custom_field_hash = invoice_data.get("customer_custom_field_hash", {})
+                customer_tin = customer_custom_field_hash.get("cf_custtin", "")
             
-            logger.info(f"Client Info - Name: {customer_name}, TIN: {customer_tin}")
+            # Priority 4: Customer custom fields array
+            if not customer_tin:
+                for field in invoice_data.get("customer_custom_fields", []):
+                    if field.get("api_name") == "cf_custtin":
+                        customer_tin = field.get("value", "")
+                        break
+            
+            # Priority 5: Main custom fields array
+            if not customer_tin:
+                for field in invoice_data.get("custom_fields", []):
+                    if field.get("api_name") == "cf_customer_tin":
+                        customer_tin = field.get("value", "")
+                        break
+            
+            # Priority 6: For credit notes, try referenced invoice
+            if not customer_tin and "creditnote" in zoho_data:
+                invoices_credited = invoice_data.get("invoices_credited", [])
+                if invoices_credited and len(invoices_credited) > 0:
+                    logger.info(f"Extracting customer TIN from credited invoice data")
+                    # Additional logic can be added here if needed
+            
+            # Get customer phone (prioritize phone, fallback to mobile)
+            customer_phone = invoice_data.get("phone", "")
+            if not customer_phone:
+                customer_phone = invoice_data.get("mobile", "")
+            
+            # Clean up the values
+            customer_name = str(customer_name).strip() if customer_name else "Unknown Customer"
+            customer_tin = str(customer_tin).strip() if customer_tin else ""
+            customer_phone = str(customer_phone).strip() if customer_phone else ""
+            
+            logger.info(f"Client Info - Name: {customer_name}, TIN: {customer_tin}, Phone: {customer_phone}")
+            logger.info(f"VSDC payload customer info - Name: {vsdc_payload.get('custNm', 'NOT_FOUND') if vsdc_payload else 'NO_VSDC_PAYLOAD'}, TIN: {vsdc_payload.get('custTin', 'NOT_FOUND') if vsdc_payload else 'NO_VSDC_PAYLOAD'}")
             
             client = Client(
                 name=customer_name,
-                tin=str(customer_tin)
+                tin=customer_tin,
+                phone=customer_phone
             )
             
             # Convert items
@@ -360,6 +388,12 @@ class VSSDCInvoiceService:
                 invoice_number_numeric = str(int(raw_numeric))  # Convert to int and back to string removes leading zeros
             else:
                 invoice_number_numeric = "0"
+                
+            logger.info(f"Invoice number processing:")
+            logger.info(f"  Original: {original_invoice_number}")
+            logger.info(f"  Final invoice_number: {invoice_number}")
+            logger.info(f"  Numeric parts found: {numeric_parts}")
+            logger.info(f"  Clean numeric: {invoice_number_numeric}")
             
             logger.info(f"Using original Zoho invoice number: {invoice_number}")
             logger.info(f"Extracted numeric part for receipt: {invoice_number_numeric}")
@@ -463,7 +497,8 @@ class VSSDCInvoiceService:
             self.invoice_generator.generate_pdf_with_qr(
                 invoice_data, 
                 pdf_path, 
-                generate_qr=bool(self.qr_generator)
+                generate_qr=bool(self.qr_generator),
+                qr_type=settings.QR_CODE_TYPE
             )
             html_filename = f"invoice_{invoice.invoice_number}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
             html_path = f"output/html/{html_filename}"
@@ -518,7 +553,8 @@ class VSSDCInvoiceService:
             self.invoice_generator.generate_pdf_with_qr(
                 invoice_data,
                 pdf_path,
-                generate_qr=bool(self.qr_generator)
+                generate_qr=bool(self.qr_generator),
+                qr_type=settings.QR_CODE_TYPE
             )
             
             self.invoice_generator.generate_html(invoice_data, html_path)
