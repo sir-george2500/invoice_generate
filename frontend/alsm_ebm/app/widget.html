@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Zoho Books Widget</title>
+</head>
+
+<body>
+
+	<h2>This is a sample App built using ZET CLI.</h2>
+
+	<script src="https://js.zohostatic.com/zohofinance/v1/zf_sdk.js"></script>
+	<script>
+	window.onload = function () {
+
+		ZFAPPS.extension.init().then(function (App) {
+
+		 //Get invoice data
+ 		 ZFAPPS.get('invoice').then(function (res) {
+ 					//response Handling
+ 		 }).catch(function (err) {
+ 					//error Handling
+ 		 });
+ 		/*
+				//To Set data in books app UI client
+				ZFAPPS.set('invoice.reference_number', 'REF-001').then(function (res) {
+					//response Handling
+				}).catch(function (err) {
+					//error Handling
+				});
+
+				//To resize the frame size
+				ZFAPPS.invoke('RESIZE', { width: '100px', height: '100px'}).then(function (res) {
+					//response Handling
+				}).catch(function (err) {
+					//error Handling
+				});
+
+				//To refresh the books app invoice data
+				ZFAPPS.invoke('REFRESH_DATA', 'invoice').then(function (res) {
+					//response Handling
+				}).catch(function (err) {
+					//error Handling
+				});
+
+
+				//To listen books app event
+				App.instance.on('ON_INVOICE_CHANGE', function(data){
+					//data handling
+				});
+
+
+				//To Know more on these, please read the documentation
+ 					*/
+ 		});
+
+	};
+</script>
+
+	<script src="./js/extension.js" charset="utf-8"></script>
+
+</body>
+
+</html>
