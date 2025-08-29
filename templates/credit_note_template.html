@@ -123,9 +123,9 @@
         .items-table th, .items-table td {
             border: 1px solid black;
             padding: 4px 3px;
-            text-align: left;
-            font-size: 9pt;
-            vertical-align: top;
+            text-align: center;
+            font-size: 7pt;
+            vertical-align: middle;
             height: 20px;
             overflow: hidden;
             word-wrap: break-word;
@@ -137,10 +137,12 @@
             font-size: 9pt;
         }
         .items-table td:nth-child(1), .items-table th:nth-child(1) {
-            width: 22%;
+            width: 18%;
+            text-align: center;
         }
         .items-table td:nth-child(2), .items-table th:nth-child(2) {
-            width: 40%;
+            width: 32%;
+            text-align: center;
             word-wrap: break-word;
             hyphens: auto;
         }
@@ -153,12 +155,13 @@
             text-align: center;
         }
         .items-table td:nth-child(5), .items-table th:nth-child(5) {
-            width: 13%;
-            text-align: right;
+            width: 15%;
+            text-align: center;
         }
         .items-table td:nth-child(6), .items-table th:nth-child(6) {
-            width: 14%;
-            text-align: right;
+            width: 24%;
+            text-align: center;
+            word-break: normal;
         }
         .items-table tbody tr {
             height: 20px;
@@ -190,13 +193,13 @@
             min-height: 3cm;
         }
         .sdc-info {
-            width: 40%;
+            width: 35%;
             flex-shrink: 0;
             font-size: 8pt;
             line-height: 1.1;
         }
         .qr-section {
-            width: 20%;
+            width: 25%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -204,7 +207,7 @@
             flex-shrink: 0;
         }
         .totals-table {
-            width: 35%;
+            width: 40%;
             flex-shrink: 0;
         }
         .totals-table table {
@@ -218,6 +221,9 @@
         }
         .totals-table td:last-child {
             text-align: right;
+            font-size: 6.5pt;
+            word-break: normal;
+            min-width: 120px;
         }
         .credit-totals {
             background-color: #ffe6e6;
@@ -312,7 +318,8 @@
             <div class="company-name">{{ company_name }}</div>
             <div class="company-details">
                 {{ company_address }}<br>
-                TEL: {{ company_tel }} EMAIL: {{ company_email }}<br>
+                TEL: {{ company_tel }}<br>
+                EMAIL: {{ company_email }}<br>
                 TIN: {{ company_tin }}
             </div>
         </div>

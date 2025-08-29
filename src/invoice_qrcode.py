@@ -34,31 +34,78 @@ class InvoiceQRGenerator:
         return self.generate_invoice_qr_data_text_fallback(invoice_data)
     
     def generate_invoice_qr_data_text_fallback(self, invoice_data):
-        """Generate QR code data with only essential SDC information"""
+        """Generate QR code data with new format: made by invoice_date(ddmmyyyy)#time(hhmmss)#sdc_number#sdc_receipt_number#internal_data#receipt_signature"""
         
-        # Get receipt number - try different sources
-        vsdc_receipt_no = invoice_data.get("vsdc_receipt_no", invoice_data.get("receipt_number", ""))
-        invoice_number = invoice_data.get("invoice_number_numeric", invoice_data.get("invoice_number", ""))
+        from datetime import datetime
         
-        # Clean invoice number to show only numeric part
-        if invoice_number:
-            # Extract only digits from invoice number
-            import re
-            numeric_parts = re.findall(r'\d+', str(invoice_number))
-            if numeric_parts:
-                # Take the last/largest numeric part (e.g., from "INV-000061" get "61")
-                invoice_number_clean = str(int(numeric_parts[-1]))  # Remove leading zeros
-            else:
-                invoice_number_clean = str(invoice_number)
+        # Get invoice date and time
+        invoice_date = invoice_data.get("invoice_date", "")
+        invoice_time = invoice_data.get("invoice_time", "")
+        
+        # Format date as dd-mm-yyyy
+        if invoice_date:
+            try:
+                # Parse the date (assuming it's in a standard format)
+                if isinstance(invoice_date, str):
+                    # Try different date formats
+                    date_formats = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y"]
+                    parsed_date = None
+                    for fmt in date_formats:
+                        try:
+                            parsed_date = datetime.strptime(invoice_date, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if parsed_date:
+                        formatted_date = parsed_date.strftime("%d-%m-%Y")
+                    else:
+                        # Try to extract and format manually
+                        clean_date = invoice_date.replace("/", "-")
+                        formatted_date = clean_date
+                else:
+                    formatted_date = invoice_date.strftime("%d-%m-%Y")
+            except:
+                formatted_date = ""
         else:
-            invoice_number_clean = ""
+            formatted_date = ""
         
-        # Simple QR code with only SDC verification information
-        qr_text = f"""SDC ID: {invoice_data.get("sdc_id", "")}
-Receipt Number: {vsdc_receipt_no}/{vsdc_receipt_no}
-Internal Data: {invoice_data.get("vsdc_internal_data", "")}
-Receipt Signature: {invoice_data.get("vsdc_receipt_signature", "")}
-Receipt Number: {invoice_number_clean}"""
+        # Format time as hh:mm:ss
+        if invoice_time:
+            try:
+                # Ensure proper time format with colons
+                if ":" in invoice_time:
+                    # Already has colons, just ensure it's complete
+                    time_parts = invoice_time.split(":")
+                    if len(time_parts) == 2:
+                        # Add seconds if missing
+                        formatted_time = f"{time_parts[0]}:{time_parts[1]}:00"
+                    else:
+                        formatted_time = invoice_time
+                else:
+                    # No colons, assume it's hhmmss format
+                    if len(invoice_time) >= 6:
+                        formatted_time = f"{invoice_time[:2]}:{invoice_time[2:4]}:{invoice_time[4:6]}"
+                    else:
+                        formatted_time = invoice_time
+            except:
+                formatted_time = ""
+        else:
+            formatted_time = ""
+        
+        # Get other required data
+        sdc_number = invoice_data.get("sdc_id", "")
+        sdc_receipt_number = invoice_data.get("vsdc_receipt_no", invoice_data.get("receipt_number", ""))
+        internal_data = invoice_data.get("vsdc_internal_data", "")
+        receipt_signature = invoice_data.get("vsdc_receipt_signature", "")
+        
+        # Generate QR code with proper labels and colons
+        qr_text = f"""made by:{formatted_date}
+time:{formatted_time}
+sdc:{sdc_number}
+sdc_receipt_number:{sdc_receipt_number}
+internal_data:{internal_data}
+receipt_signature:{receipt_signature}"""
         
         print(f"QR Code generated with length: {len(qr_text)} characters")
         print(f"QR Code content: {qr_text}")

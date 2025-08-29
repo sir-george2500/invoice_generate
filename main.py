@@ -855,6 +855,47 @@ async def test_qr_content():
                 "error": str(e)
             }
         )
+@app.post("/mock/vsdc/api")
+async def mock_vsdc_api(request: Request):
+    """Mock VSDC API endpoint for testing - returns a successful response"""
+    try:
+        payload = await request.json()
+        logger.info(f"Mock VSDC API received payload for invoice: {payload.get('invcNo', 'Unknown')}")
+        
+        # Mock successful VSDC response
+        mock_response = {
+            "resultCd": "000",
+            "resultMsg": "Success",
+            "data": {
+                "rcptNo": str(payload.get('invcNo', '1')),
+                "totRcptNo": "1",
+                "intrlData": "MOCK-DATA-FOR-TESTING-ONLY-ABCD-EFGH",
+                "rcptSign": "MOCK-SIGN-TEST-1234",
+                "vsdcRcptPbctDate": datetime.now().strftime("%Y%m%d%H%M%S"),
+                "sdcId": payload.get('tin', settings.VSDC_SDC_ID),
+                "mrcNo": settings.VSDC_MRC
+            },
+            "taxAmtA": payload.get('taxAmtA', 0),
+            "taxAmtB": payload.get('taxAmtB', 0),
+            "totTaxAmt": payload.get('totTaxAmt', 0)
+        }
+        
+        logger.info(f"Mock VSDC API returning success for invoice: {payload.get('invcNo')}")
+        return JSONResponse(
+            status_code=200,
+            content=mock_response
+        )
+        
+    except Exception as e:
+        logger.error(f"Mock VSDC API error: {str(e)}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "resultCd": "999",
+                "resultMsg": f"Mock API Error: {str(e)}",
+                "data": {}
+            }
+        )
 
 @app.get("/health")
 async def api_health_check():

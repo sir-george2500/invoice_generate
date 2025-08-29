@@ -22,11 +22,17 @@ class VSSDCInvoiceService:
         
         # Initialize QR code generator if Cloudinary is configured
         self.qr_generator = None
+        
         if all(cloudinary_config.values()):
-            self.qr_generator = InvoiceQRGenerator(cloudinary_config)
-            logger.info("QR code generator initialized with Cloudinary")
+            try:
+                self.qr_generator = InvoiceQRGenerator(cloudinary_config)
+                logger.info("QR code generator initialized with Cloudinary")
+            except Exception as e:
+                logger.error(f"Failed to initialize QR generator: {str(e)}")
+                self.qr_generator = None
         else:
-            logger.warning("Cloudinary not configured, QR codes will be disabled")
+            missing_keys = [k for k, v in cloudinary_config.items() if not v]
+            logger.warning(f"Cloudinary not configured properly. Missing keys: {len(missing_keys)}. QR codes will be disabled")
         
         # Initialize invoice generator
         self.invoice_generator = InvoiceGenerator(qr_generator=self.qr_generator)
