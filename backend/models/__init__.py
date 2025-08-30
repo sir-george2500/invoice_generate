@@ -1,3 +1,5 @@
-from .user import User, Base
+from .base import Base
+from .user import User
+from .business import Business
 
-__all__ = ["User", "Base"]
+__all__ = ["User", "Business", "Base"]

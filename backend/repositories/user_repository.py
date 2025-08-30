@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 from models.user import User
 
 class UserRepository:
@@ -20,6 +21,16 @@ class UserRepository:
         """Get user by ID"""
         return self.db.query(User).filter(User.id == user_id).first()
     
+    def get_by_business_id(self, business_id: int) -> List[User]:
+        """Get all users belonging to a specific business"""
+        return self.db.query(User).filter(User.business_id == business_id).all()
+    
+    def get_business_admin(self, business_id: int) -> Optional[User]:
+        """Get the business admin user for a specific business"""
+        return self.db.query(User).filter(
+            and_(User.business_id == business_id, User.role == "business_admin")
+        ).first()
+    
     def create(self, user: User) -> User:
         """Create a new user"""
         self.db.add(user)
@@ -38,10 +49,25 @@ class UserRepository:
         self.db.delete(user)
         self.db.commit()
     
-    def exists_by_username(self, username: str) -> bool:
+    def exists_by_username(self, username: str, exclude_id: Optional[int] = None) -> bool:
         """Check if user exists by username"""
-        return self.db.query(User).filter(User.username == username).first() is not None
+        query = self.db.query(User).filter(User.username == username)
+        if exclude_id:
+            query = query.filter(User.id != exclude_id)
+        return query.first() is not None
     
-    def exists_by_email(self, email: str) -> bool:
+    def exists_by_email(self, email: str, exclude_id: Optional[int] = None) -> bool:
         """Check if user exists by email"""
-        return self.db.query(User).filter(User.email == email).first() is not None
+        query = self.db.query(User).filter(User.email == email)
+        if exclude_id:
+            query = query.filter(User.id != exclude_id)
+        return query.first() is not None
+    
+    def exists_by_username_in_business(self, username: str, business_id: int, exclude_id: Optional[int] = None) -> bool:
+        """Check if username exists within a specific business"""
+        query = self.db.query(User).filter(
+            and_(User.username == username, User.business_id == business_id)
+        )
+        if exclude_id:
+            query = query.filter(User.id != exclude_id)
+        return query.first() is not None

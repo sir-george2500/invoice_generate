@@ -18,6 +18,7 @@ from config.settings import settings
 from controllers.v1.auth_controller import AuthController
 from controllers.v1.webhook_controller import WebhookController
 from controllers.v1.utility_controller import UtilityController
+from controllers.v1.business_controller import BusinessController
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +31,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 VSDC Integration API v2.0 - Clean Architecture")
     logger.info("📁 Architecture: Repository + Service + Controller pattern")
     logger.info(f"🔧 Services initialized: PDF, VSDC, PayloadTransformer")
-    logger.info(f"🎯 Controllers registered: Auth, Webhook, Utility")
+    logger.info(f"🎯 Controllers registered: Auth, Webhook, Utility, Business")
     logger.info(f"☁️  Cloudinary configured: {settings.is_cloudinary_configured()}")
     logger.info(f"🔐 JWT configured: {bool(settings.JWT_SECRET_KEY)}")
     
@@ -58,11 +59,13 @@ payload_transformer = PayloadTransformer(vsdc_service)
 auth_controller = AuthController()
 webhook_controller = WebhookController(vsdc_service, payload_transformer)
 utility_controller = UtilityController(pdf_service, vsdc_service, payload_transformer)
+business_controller = BusinessController()
 
 # Register controller routes
 app.include_router(auth_controller.router)
 app.include_router(webhook_controller.router)
 app.include_router(utility_controller.router)
+app.include_router(business_controller.router)
 
 # Global error handler
 @app.exception_handler(Exception)

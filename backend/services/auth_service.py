@@ -61,13 +61,14 @@ class AuthService:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             username: Optional[str] = payload.get("sub")
             role: Optional[str] = payload.get("role")
+            business_id: Optional[int] = payload.get("business_id")
             if username is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            token_data = TokenData(username=username, role=role)
+            token_data = TokenData(username=username, role=role, business_id=business_id)
             return token_data
         except JWTError:
             raise HTTPException(

@@ -42,7 +42,7 @@ class Settings:
     # Database Configuration
     DATABASE_URL = os.getenv(
         "POSTGRES_URL", 
-        "postgresql://postgres.eyriqifciwpjrxlrkpgz:p6GT4JHiGqPwBiv2@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
+        "postgresql://postgres.eyriqifciwpjrxlrkpgz:p6GT4JHiGqPwBiv2@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
     )
     
     @property
@@ -51,6 +51,12 @@ class Settings:
         url = self.DATABASE_URL
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
+        
+        # Clean up invalid Supabase pooler parameters
+        if "supa=" in url:
+            # Remove the supa parameter and anything after it
+            url = url.split("&supa=")[0]
+        
         return url
     
     # JWT Configuration

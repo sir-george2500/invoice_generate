@@ -87,8 +87,15 @@ class AuthController:
         
         # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        token_data = {
+            "sub": user.username, 
+            "role": user.role
+        }
+        if user.business_id:
+            token_data["business_id"] = user.business_id
+        
         access_token = AuthService.create_access_token(
-            data={"sub": user.username, "role": user.role}, 
+            data=token_data, 
             expires_delta=access_token_expires
         )
         
