@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice INV-000080</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2cm;
+            font-size: 11pt;
+            line-height: 1.2;
+        }
+        
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+            }
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.3cm;
+        }
+        .header-left {
+            width: 30%;
+            text-align: left;
+        }
+        .header-center {
+            width: 40%;
+            text-align: center;
+        }
+        .header-right {
+            width: 30%;
+            text-align: right;
+        }
+        .company-logo {
+            max-width: 130px;
+            max-height: 130px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .rwanda-seal {
+            max-width: 160px;
+            max-height: 160px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .company-details {
+            font-size: 9pt;
+            line-height: 1.2;
+            margin-top: 5px;
+        }
+        .invoice-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 0.3cm 0;
+        }
+        .invoice-to-section {
+            width: 45%;
+        }
+        .invoice-to-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+            font-size: 9pt;
+        }
+        .invoice-to {
+            border: 1px solid black;
+            padding: 8px;
+            font-size: 9pt;
+        }
+        .invoice-details-section {
+            width: 45%;
+        }
+        .invoice-details-label {
+            font-weight: bold;
+            margin-bottom: 3px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        .invoice-details {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            font-size: 9pt;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.2cm 0;
+            table-layout: fixed;
+            page-break-inside: avoid;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid black;
+            padding: 4px 3px;
+            text-align: center;
+            font-size: 7pt;
+            vertical-align: middle;
+            height: 20px;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+        .items-table th {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            height: 25px;
+            font-size: 9pt;
+        }
+        .items-table td:nth-child(1), .items-table th:nth-child(1) {
+            width: 18%;
+            text-align: center;
+        }
+        .items-table td:nth-child(2), .items-table th:nth-child(2) {
+            width: 32%;
+            text-align: center;
+            word-wrap: break-word;
+            hyphens: auto;
+        }
+        .items-table td:nth-child(3), .items-table th:nth-child(3) {
+            width: 6%;
+            text-align: center;
+        }
+        .items-table td:nth-child(4), .items-table th:nth-child(4) {
+            width: 5%;
+            text-align: center;
+        }
+        .items-table td:nth-child(5), .items-table th:nth-child(5) {
+            width: 15%;
+            text-align: center;
+        }
+        .items-table td:nth-child(6), .items-table th:nth-child(6) {
+            width: 24%;
+            text-align: center;
+            word-break: normal;
+        }
+        .items-table tbody tr {
+            height: 20px;
+            border: none;
+        }
+        .items-table tbody td {
+            border-top: none;
+            border-bottom: none;
+            height: 20px;
+        }
+        .items-table tbody tr:last-child td {
+            border-bottom: 1px solid black;
+        }
+        .empty-row {
+            height: 20px;
+        }
+        .empty-row td {
+            height: 20px;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.3cm;
+            page-break-inside: avoid;
+            min-height: 3cm;
+        }
+        .sdc-info {
+            width: 35%;
+            flex-shrink: 0;
+            font-size: 8pt;
+            line-height: 1.1;
+        }
+        .qr-section {
+            width: 25%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .totals-table {
+            width: 40%;
+            flex-shrink: 0;
+        }
+        .totals-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals-table th, .totals-table td {
+            border: 1px solid black;
+            padding: 4px;
+            font-size: 8pt;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+            font-size: 6.5pt;
+            word-break: normal;
+            min-width: 120px;
+        }
+        .qr-placeholder {
+            border: 1px solid black;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .qr-placeholder img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+        }
+        .underline {
+            border-bottom: 1px solid black;
+            width: 5cm;
+            margin: 5px 0;
+        }
+        .vsdc-details {
+            margin-top: 0.5cm;
+            border: 1px solid #ccc;
+            padding: 8px;
+            background-color: #f9f9f9;
+            font-size: 10pt;
+        }
+        .vsdc-signature {
+            font-family: monospace;
+            font-size: 9pt;
+            word-break: break-all;
+        }
+        /* Page break controls */
+        .page-break-before {
+            page-break-before: always;
+        }
+        
+        .page-break-after {
+            page-break-after: always;
+        }
+        
+        .no-page-break {
+            page-break-inside: avoid;
+        }
+        
+        /* Ensure footer stays together */
+        .footer-container {
+            page-break-inside: avoid;
+            margin-top: 0.3cm;
+            clear: both;
+        }
+        
+        /* For long item lists, allow items to flow naturally */
+        .items-section {
+            margin-bottom: 0.5cm;
+            overflow: visible;
+        }
+        
+        /* Force footer to a new page if needed for many items */
+        .items-table + .footer-container {
+            page-break-before: auto;
+        }
+        
+        @media print {
+            body { margin: 1cm; }
+            
+            /* Ensure header doesn't repeat */
+            .header { 
+                page-break-after: avoid;
+            }
+            
+            /* Keep totals and SDC info together */
+            .footer {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <!-- Left: Company Logo -->
+        <div class="header-left">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756252225/rra_pqu5rq.png" alt="Company Logo" class="company-logo">
+        </div>
+        
+        <!-- Center: Company Name and Details -->
+        <div class="header-center">
+            <div class="company-name">BITS</div>
+            <div class="company-details">
+                Rwanda, Kigali Sonatube<br>
+                TEL: 0785757324<br>
+                EMAIL: xdelta2500@gmail.com<br>
+                TIN: 944000008
+            </div>
+        </div>
+        
+        <!-- Right: Rwanda Seal -->
+        <div class="header-right">
+            <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1750392444/rwanda_seal_pnhjl0.png" alt="Rwanda Seal" class="rwanda-seal" />
+        </div>
+    </div>
+
+    <!-- Invoice To and Invoice Details -->
+    <div class="invoice-section">
+        <div class="invoice-to-section">
+            <div class="invoice-to-label">INVOICE TO</div>
+            <div class="invoice-to">
+                TIN: 998000003<br>
+                Name: Roviagate<br>
+                
+            </div>
+        </div>
+        
+        <div class="invoice-details-section">
+            <div class="invoice-details-label">INVOICE DETAILS</div>
+            <div class="invoice-details">
+                INVOICE NO: 80<br>
+                DATE: 30-08-2025  Time:08:36:07
+            </div>
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="items-section">
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item Code</th>
+                    <th>Item Description</th>
+                    <th>Qty</th>
+                    <th>Tax</th>
+                    <th>Unit Price</th>
+                    <th>Total Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td>6958226000000117460</td>
+                    <td>Hot Bread for morning eating</td>
+                    <td>1.00</td>
+                    <td>A</td>
+                    <td>200,000.00</td>
+                    <td>200,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>6958226000000093322</td>
+                    <td>15-inch laptop with 8GB RAM, 256GB SSD</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>400,000.00</td>
+                    <td>400,000.00</td>
+                </tr>
+                
+                <tr>
+                    <td>6958226000000093333</td>
+                    <td>128GB storage, dual camera</td>
+                    <td>1.00</td>
+                    <td>B</td>
+                    <td>500,000.00</td>
+                    <td>500,000.00</td>
+                </tr>
+                
+                
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+                <tr class="empty-row">
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Section -->
+    <div class="footer-container no-page-break">
+        <div class="footer">
+            <!-- SDC Information -->
+            <div class="sdc-info">
+                Date : 30-08-2025   Time:08:36:07<br>
+                SDC ID : SDC010013744<br>
+                RECEIPT NUMBER : 129/129NS<br>
+                Internal Data : KULWL3D75FQBEZMVQE43QFJTQI<br>
+                Receipt Signature : LDVV2LAKLRPNUN3S<br>
+                --------------------------------<br>
+                RECEIPT NUMBER :              80<br>
+                Date : 30-08-2025   Time : 30-08-2025 08:36:07<br>
+                MRC: WIS00004019<br>
+                CIS VERSION Powered by RRA VSDC EBM2.1
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+                <div class="qr-placeholder">
+                    
+                    <img src="https://res.cloudinary.com/diz7kwymu/image/upload/v1756535769/invoice_qr_codes/invoice_qr_codes/invoice_INV-000080_qr.png" alt="QR Code">
+                    
+                </div>
+            </div>
+            
+            <!-- Totals Table -->
+            <div class="totals-table">
+                <table>
+                    <tr>
+                        <td><strong>Total Rwf</strong></td>
+                        <td>900,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total A-EX Rwf</strong></td>
+                        <td>200,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total B-18% Rwf</strong></td>
+                        <td>900,000.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total Tax A Rwf</strong></td>
+                        <td>0.00</td>
+                    </tr>
+                    
+                    <tr>
+                        <td><strong>Total Tax B Rwf</strong></td>
+                        <td>137,288.14</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Tax Rwf</strong></td>
+                        <td>137,288.14</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

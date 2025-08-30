@@ -39,6 +39,23 @@ RWANDA_SEAL = "seaRR.png"
 class Settings:
     """Application settings"""
     
+    # Database Configuration
+    DATABASE_URL = os.getenv(
+        "POSTGRES_URL", 
+        "postgresql://postgres.eyriqifciwpjrxlrkpgz:p6GT4JHiGqPwBiv2@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
+    )
+    
+    @property
+    def database_url(self) -> str:
+        """Get database URL with proper scheme for SQLAlchemy"""
+        url = self.DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
+    
+    # JWT Configuration
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+    
     # VSDC API Configuration
     VSDC_API_URL = "http://localhost:8080/vsdc/trnsSales/saveSales"
     
