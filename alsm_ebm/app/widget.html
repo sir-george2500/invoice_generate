@@ -3,61 +3,186 @@
 
 <head>
 	<meta charset="UTF-8">
-	<title>Zoho Books Widget</title>
+	<title>Invoice Service - Login</title>
+	<link rel="stylesheet" href="./css/styles.css">
 </head>
 
 <body>
+	<div id="app-container">
+		<!-- Setup Screen -->
+		<div id="setup-screen" class="screen">
+			<div class="setup-card">
+				<div class="logo-section">
+					<img src="./img/logo.png" alt="EBM Invoice Service" class="logo">
+					<h2>EBM Invoice Service</h2>
+					<p class="subtitle">Setup automatic EBM generation for your invoices</p>
+				</div>
 
-	<h2>This is a sample App built using ZET CLI.</h2>
+				<div class="setup-content">
+					<div class="setup-step active" id="step-1">
+						<h3>Step 1: Configure Webhook</h3>
+						<p>This will automatically generate EBM invoices when you create invoices in Zoho Books.</p>
+						
+						<div class="form-group">
+							<label for="webhook-url">EBM Service URL</label>
+							<input type="text" id="webhook-url" readonly value="https://ed704c2185d9.ngrok-free.app" placeholder="EBM service endpoint">
+							<small>This URL will receive your invoice data and generate EBM invoices</small>
+						</div>
+
+						<div class="webhook-status" id="webhook-status">
+							<div class="status-item">
+								<span class="status-label">Invoice Webhook:</span>
+								<span class="status-value" id="invoice-webhook-status">Not Configured</span>
+							</div>
+							<div class="status-item">
+								<span class="status-label">Credit Note Webhook:</span>
+								<span class="status-value" id="credit-webhook-status">Not Configured</span>
+							</div>
+						</div>
+
+						<button type="button" class="setup-btn" id="setup-webhooks-btn">
+							<span class="btn-text">Setup Webhooks</span>
+							<span class="loading-spinner" style="display: none;">⟳</span>
+						</button>
+					</div>
+
+					<div class="setup-step" id="step-2" style="display: none;">
+						<h3>Step 2: Test Connection</h3>
+						<p>Let's verify the connection to the EBM service is working.</p>
+						
+						<div class="test-results" id="test-results" style="display: none;">
+							<div class="test-item">
+								<span class="test-label">EBM Service Status:</span>
+								<span class="test-status" id="ebm-service-status">Testing...</span>
+							</div>
+						</div>
+
+						<button type="button" class="setup-btn" id="test-connection-btn">
+							<span class="btn-text">Test Connection</span>
+							<span class="loading-spinner" style="display: none;">⟳</span>
+						</button>
+
+						<button type="button" class="setup-btn secondary" id="skip-test-btn" style="margin-left: 10px;">
+							Skip Test
+						</button>
+					</div>
+
+					<div class="setup-step" id="step-3" style="display: none;">
+						<h3>Setup Complete!</h3>
+						<p>Your EBM integration is now configured. Invoices will automatically generate EBM receipts when created.</p>
+						
+						<div class="setup-summary">
+							<ul>
+								<li>✅ Webhooks configured</li>
+								<li>✅ EBM service connected</li>
+								<li>✅ Ready to generate EBM invoices</li>
+							</ul>
+						</div>
+
+						<button type="button" class="setup-btn" id="complete-setup-btn">
+							Start Using EBM Service
+						</button>
+					</div>
+				</div>
+
+				<div id="setup-error-message" class="error-message" style="display: none;"></div>
+			</div>
+		</div>
+
+		<!-- Login Screen -->
+		<div id="login-screen" class="screen" style="display: none;">
+			<div class="login-card">
+				<div class="logo-section">
+					<img src="./img/logo.png" alt="Invoice Service" class="logo">
+					<h2>Invoice Service</h2>
+					<p class="subtitle">Connect to manage your invoices</p>
+				</div>
+
+				<form id="login-form" class="login-form">
+					<div class="form-group">
+						<label for="username">Username or Email</label>
+						<input type="text" id="username" name="username" placeholder="Enter your username or email" required>
+					</div>
+
+					<div class="form-group">
+						<label for="password">Password</label>
+						<input type="password" id="password" name="password" placeholder="Enter your password" required>
+					</div>
+
+					<div class="form-group checkbox-group">
+						<input type="checkbox" id="remember-me" name="rememberMe">
+						<label for="remember-me">Remember me</label>
+					</div>
+
+					<button type="submit" class="login-btn" id="login-btn">
+						<span class="btn-text">Sign In</span>
+						<span class="loading-spinner" style="display: none;">⟳</span>
+					</button>
+
+					<div class="form-links">
+						<a href="#" id="forgot-password">Forgot password?</a>
+					</div>
+				</form>
+
+				<div id="error-message" class="error-message" style="display: none;"></div>
+			</div>
+		</div>
+
+		<!-- Main App Screen (shown after login) -->
+		<div id="main-screen" class="screen" style="display: none;">
+			<div class="header">
+				<div class="user-info">
+					<span id="user-name">Welcome!</span>
+					<button id="logout-btn" class="logout-btn">Logout</button>
+				</div>
+			</div>
+			
+			<div class="content">
+				<div class="tabs">
+					<button class="tab-btn active" id="invoice-tab">Invoice Data</button>
+					<button class="tab-btn" id="settings-tab">EBM Settings</button>
+				</div>
+
+				<div id="invoice-content" class="tab-content active">
+					<h3>Current Invoice</h3>
+					<div id="invoice-data" class="invoice-section">
+						<!-- Invoice data will be loaded here -->
+					</div>
+				</div>
+
+				<div id="settings-content" class="tab-content">
+					<h3>EBM Configuration</h3>
+					<div class="settings-section">
+						<div class="setting-item">
+							<label>EBM Service URL:</label>
+							<span class="setting-value" id="ebm-url-display">https://ed704c2185d9.ngrok-free.app</span>
+						</div>
+						
+						<div class="setting-item">
+							<label>Webhook Status:</label>
+							<div class="webhook-status-list">
+								<div class="webhook-item">
+									<span>Invoice Webhook:</span>
+									<span class="webhook-status" id="main-invoice-webhook-status">Checking...</span>
+								</div>
+								<div class="webhook-item">
+									<span>Credit Note Webhook:</span>
+									<span class="webhook-status" id="main-credit-webhook-status">Checking...</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="setting-actions">
+							<button class="action-btn" id="test-ebm-connection">Test Connection</button>
+							<button class="action-btn secondary" id="reconfigure-webhooks">Reconfigure</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<script src="https://js.zohostatic.com/zohofinance/v1/zf_sdk.js"></script>
-	<script>
-	window.onload = function () {
-
-		ZFAPPS.extension.init().then(function (App) {
-
-		 //Get invoice data
- 		 ZFAPPS.get('invoice').then(function (res) {
- 					//response Handling
- 		 }).catch(function (err) {
- 					//error Handling
- 		 });
- 		/*
-				//To Set data in books app UI client
-				ZFAPPS.set('invoice.reference_number', 'REF-001').then(function (res) {
-					//response Handling
-				}).catch(function (err) {
-					//error Handling
-				});
-
-				//To resize the frame size
-				ZFAPPS.invoke('RESIZE', { width: '100px', height: '100px'}).then(function (res) {
-					//response Handling
-				}).catch(function (err) {
-					//error Handling
-				});
-
-				//To refresh the books app invoice data
-				ZFAPPS.invoke('REFRESH_DATA', 'invoice').then(function (res) {
-					//response Handling
-				}).catch(function (err) {
-					//error Handling
-				});
-
-
-				//To listen books app event
-				App.instance.on('ON_INVOICE_CHANGE', function(data){
-					//data handling
-				});
-
-
-				//To Know more on these, please read the documentation
- 					*/
- 		});
-
-	};
-</script>
-
 	<script src="./js/extension.js" charset="utf-8"></script>
 
 </body>

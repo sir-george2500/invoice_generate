@@ -1,1 +1,38 @@
-{}
+{
+  "login": {
+    "title": "Invoice Service",
+    "subtitle": "Connect to manage your invoices",
+    "username": "Username or Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "signIn": "Sign In",
+    "forgotPassword": "Forgot password?",
+    "loginFailed": "Login failed. Please check your credentials.",
+    "invalidCredentials": "Invalid credentials. Password must be at least 6 characters.",
+    "enterCredentials": "Please enter both username and password"
+  },
+  "main": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "invoiceManagement": "Invoice Management",
+    "exportInvoice": "Export Invoice",
+    "refresh": "Refresh",
+    "noInvoiceData": "No invoice data available",
+    "loadingError": "Error loading invoice data. Please refresh the page.",
+    "exportError": "Failed to export invoice",
+    "noDataToExport": "No invoice data to export"
+  },
+  "invoice": {
+    "number": "Invoice #",
+    "customer": "Customer",
+    "total": "Total",
+    "status": "Status",
+    "date": "Date"
+  },
+  "common": {
+    "error": "Error",
+    "success": "Success",
+    "loading": "Loading...",
+    "na": "N/A"
+  }
+}
