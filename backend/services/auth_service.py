@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status
 
 from models.user import User
-from auth.schemas import TokenData
+from schemas.auth_schemas import TokenData
 from repositories.user_repository import UserRepository
 
 # JWT Configuration

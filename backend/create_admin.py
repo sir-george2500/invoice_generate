@@ -9,7 +9,7 @@ sys.path.append('.')
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from models.user import User
-from auth.auth_service import AuthService
+from services.auth_service import AuthService
 
 def get_db_url():
     url = os.getenv(

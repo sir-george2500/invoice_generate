@@ -13,7 +13,7 @@ from schemas.business_schemas import (
     BusinessCreateResponse
 )
 from services.business_service import BusinessService
-from auth.dependencies import get_current_user
+from middleware.dependencies import get_current_user
 
 def require_super_admin(current_user: User = Depends(get_current_user)):
     """Dependency to require super admin role"""

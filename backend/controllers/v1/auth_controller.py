@@ -4,10 +4,15 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from models.user import User
-from auth.schemas import UserLogin, Token, UserResponse, UserCreate
+from schemas.auth_schemas import (
+    UserLogin, Token, UserResponse, UserCreate,
+    ForgotPasswordRequest, VerifyOTPRequest, 
+    ResetPasswordRequest, MessageResponse
+)
 from services.auth_service import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES
+from services.password_reset_service import PasswordResetService
 from repositories.user_repository import UserRepository
-from auth.dependencies import get_current_user
+from middleware.dependencies import get_current_user
 
 class AuthController:
     """Controller for authentication-related endpoints"""
@@ -66,6 +71,43 @@ class AuthController:
                 401: {"description": "Token is invalid or expired"}
             }
         )
+        self.router.add_api_route(
+            "/forgot-password", 
+            self.forgot_password, 
+            methods=["POST"],
+            response_model=MessageResponse,
+            summary="Request Password Reset",
+            description="Send OTP to user's email for password reset",
+            responses={
+                200: {"description": "OTP sent successfully"},
+                404: {"description": "User not found"},
+                500: {"description": "Failed to send email"}
+            }
+        )
+        self.router.add_api_route(
+            "/verify-otp", 
+            self.verify_otp, 
+            methods=["POST"],
+            response_model=MessageResponse,
+            summary="Verify OTP",
+            description="Verify the OTP code without resetting password",
+            responses={
+                200: {"description": "OTP is valid"},
+                400: {"description": "Invalid or expired OTP"}
+            }
+        )
+        self.router.add_api_route(
+            "/reset-password", 
+            self.reset_password, 
+            methods=["POST"],
+            response_model=MessageResponse,
+            summary="Reset Password",
+            description="Reset password using OTP code",
+            responses={
+                200: {"description": "Password reset successfully"},
+                400: {"description": "Invalid or expired OTP"}
+            }
+        )
     
     async def login(self, user_credentials: UserLogin, db: Session = Depends(get_db)):
         """Login endpoint to authenticate user and return JWT token"""
@@ -92,7 +134,7 @@ class AuthController:
             "role": user.role
         }
         if user.business_id:
-            token_data["business_id"] = user.business_id
+            token_data["business_id"] = str(user.business_id)
         
         access_token = AuthService.create_access_token(
             data=token_data, 
@@ -143,3 +185,55 @@ class AuthController:
     async def verify_token(self, current_user: User = Depends(get_current_user)):
         """Verify if token is valid"""
         return {"valid": True, "username": current_user.username, "role": current_user.role}
+
+    async def forgot_password(self, request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+        """Send password reset OTP to user's email"""
+        password_reset_service = PasswordResetService(db)
+        
+        try:
+            await password_reset_service.send_reset_otp(request.email)
+            return MessageResponse(message="If this email is registered, you will receive a reset code")
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to process request. Please try again."
+            )
+
+    async def verify_otp(self, request: VerifyOTPRequest, db: Session = Depends(get_db)):
+        """Verify OTP code"""
+        password_reset_service = PasswordResetService(db)
+        
+        try:
+            password_reset_service.verify_otp(request.email, request.otp_code)
+            return MessageResponse(message="OTP is valid")
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to verify OTP. Please try again."
+            )
+
+    async def reset_password(self, request: ResetPasswordRequest, db: Session = Depends(get_db)):
+        """Reset password using OTP"""
+        password_reset_service = PasswordResetService(db)
+        
+        try:
+            await password_reset_service.reset_password(
+                request.email, 
+                request.otp_code, 
+                request.new_password
+            )
+            return MessageResponse(message="Password reset successfully")
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to reset password. Please try again."
+            )

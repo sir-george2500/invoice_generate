@@ -70,6 +70,14 @@ class Settings:
     CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY')
     CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET')
     
+    # Email Configuration
+    MAIL_HOST = os.getenv('MAIL_HOST', 'smtp.gmail.com')
+    MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME', 'codebeta2500@gmail.com')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', 'sojc kfrh ozpt czlb')
+    MAIL_FROM = os.getenv('MAIL_FROM', 'codebeta2500@gmail.com')
+    MAIL_FROM_NAME = os.getenv('MAIL_FROM_NAME', 'VSDC Integration System')
+    
     # Company Information
     COMPANY_NAME = "KABISA ELECTRIC Ltd"
     COMPANY_ADDRESS = "KIGALI CITY NYARUGENGE NYARUGENGE Nyarugenge"
@@ -97,5 +105,23 @@ class Settings:
     
     def is_cloudinary_configured(self) -> bool:
         return all(self.cloudinary_config.values())
+    
+    @property
+    def mail_config(self) -> dict:
+        return {
+            'MAIL_HOST': self.MAIL_HOST,
+            'MAIL_PORT': self.MAIL_PORT,
+            'MAIL_USERNAME': self.MAIL_USERNAME,
+            'MAIL_PASSWORD': self.MAIL_PASSWORD,
+            'MAIL_FROM': self.MAIL_FROM,
+            'MAIL_FROM_NAME': self.MAIL_FROM_NAME,
+            'USE_CREDENTIALS': True,
+            'VALIDATE_CERTS': True,
+            'MAIL_STARTTLS': True,
+            'MAIL_SSL_TLS': False
+        }
+    
+    def is_mail_configured(self) -> bool:
+        return bool(self.MAIL_USERNAME and self.MAIL_PASSWORD)
 
 settings = Settings()

@@ -43,3 +43,19 @@ class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
     business_id: Optional[int] = None
+
+# Password Reset Schemas
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=6, max_length=6)
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp_code: str = Field(..., min_length=6, max_length=6)
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+class MessageResponse(BaseModel):
+    message: str
