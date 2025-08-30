@@ -600,3 +600,85 @@ body {
     gap: 10px;
     flex-wrap: wrap;
 }
+/* Setup specific styles */
+.setup-info {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 15px 0;
+}
+
+.setup-info h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+    font-size: 14px;
+}
+
+.setup-details {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.setup-details strong {
+    color: #495057;
+    display: block;
+    margin: 8px 0 4px 0;
+}
+
+.setup-details ul {
+    margin: 0;
+    padding-left: 16px;
+    list-style: none;
+}
+
+.setup-details li {
+    margin: 2px 0;
+}
+
+.status-value.creating {
+    color: #ffc107;
+    background: #fff3cd;
+}
+
+.status-value.configured {
+    color: #155724;
+    background: #d4edda;
+}
+
+.status-value.error {
+    color: #721c24;
+    background: #f8d7da;
+}.config-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 12px;
+}
+
+.config-btn:hover {
+    background: #545b62;
+}
+
+.field-validation-item {
+    padding: 4px 0;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.field-validation-item:last-child {
+    border-bottom: none;
+}
+
+.field-validation-item strong {
+    color: #2c3e50;
+    margin-right: 8px;
+}
+
+.help-section {
+    border-top: 1px solid #e1e8ed;
+    padding-top: 15px;
+}

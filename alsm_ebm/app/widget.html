@@ -13,23 +13,46 @@
 		<div id="setup-screen" class="screen">
 			<div class="setup-card">
 				<div class="logo-section">
-					<img src="./img/logo.png" alt="EBM Invoice Service" class="logo">
-					<h2>EBM Invoice Service</h2>
+					<img src="./img/logo.png" alt="ALSM EBM Service" class="logo">
+					<h2>ALSM EBM Service</h2>
 					<p class="subtitle">Setup automatic EBM generation for your invoices</p>
 				</div>
 
 				<div class="setup-content">
 					<div class="setup-step active" id="step-1">
-						<h3>Step 1: Configure Webhook</h3>
-						<p>This will automatically generate EBM invoices when you create invoices in Zoho Books.</p>
+						<h3>Step 1: Setup ALSM EBM Integration</h3>
+						<p>This will create required custom fields and configure webhooks for automatic EBM invoice generation.</p>
 						
 						<div class="form-group">
 							<label for="webhook-url">EBM Service URL</label>
 							<input type="text" id="webhook-url" readonly value="https://ed704c2185d9.ngrok-free.app" placeholder="EBM service endpoint">
+							<button type="button" class="config-btn" onclick="app.configureWebhookUrl()" style="margin-top: 8px; padding: 6px 12px; font-size: 12px;">Change URL</button>
 							<small>This URL will receive your invoice data and generate EBM invoices</small>
 						</div>
 
+						<div class="setup-info">
+							<h4>What will be created:</h4>
+							<div class="setup-details">
+								<strong>Customer Fields:</strong>
+								<ul>
+									<li>• Customer TIN (required)</li>
+								</ul>
+								<strong>Invoice Fields:</strong>
+								<ul>
+									<li>• Business TIN (required)</li>
+									<li>• Purchase Code (required)</li>
+									<li>• Organization Name</li>
+									<li>• Company Address (required)</li>
+									<li>• Company Email (required)</li>
+								</ul>
+							</div>
+						</div>
+
 						<div class="webhook-status" id="webhook-status">
+							<div class="status-item">
+								<span class="status-label">Custom Fields:</span>
+								<span class="status-value" id="custom-fields-status">Not Created</span>
+							</div>
 							<div class="status-item">
 								<span class="status-label">Invoice Webhook:</span>
 								<span class="status-value" id="invoice-webhook-status">Not Configured</span>
@@ -41,7 +64,7 @@
 						</div>
 
 						<button type="button" class="setup-btn" id="setup-webhooks-btn">
-							<span class="btn-text">Setup Webhooks</span>
+							<span class="btn-text">Setup ALSM EBM Integration</span>
 							<span class="loading-spinner" style="display: none;">⟳</span>
 						</button>
 					</div>
@@ -69,18 +92,19 @@
 
 					<div class="setup-step" id="step-3" style="display: none;">
 						<h3>Setup Complete!</h3>
-						<p>Your EBM integration is now configured. Invoices will automatically generate EBM receipts when created.</p>
+						<p>Your ALSM EBM integration is now configured. Invoices will automatically generate EBM receipts when created.</p>
 						
 						<div class="setup-summary">
 							<ul>
+								<li>✅ Custom fields created</li>
 								<li>✅ Webhooks configured</li>
-								<li>✅ EBM service connected</li>
+								<li>✅ ALSM EBM service connected</li>
 								<li>✅ Ready to generate EBM invoices</li>
 							</ul>
 						</div>
 
 						<button type="button" class="setup-btn" id="complete-setup-btn">
-							Start Using EBM Service
+							Start Using ALSM EBM Service
 						</button>
 					</div>
 				</div>
@@ -93,9 +117,9 @@
 		<div id="login-screen" class="screen" style="display: none;">
 			<div class="login-card">
 				<div class="logo-section">
-					<img src="./img/logo.png" alt="Invoice Service" class="logo">
-					<h2>Invoice Service</h2>
-					<p class="subtitle">Connect to manage your invoices</p>
+					<img src="./img/logo.png" alt="ALSM EBM Service" class="logo">
+					<h2>ALSM EBM Service</h2>
+					<p class="subtitle">Connect to manage your EBM invoices</p>
 				</div>
 
 				<form id="login-form" class="login-form">
@@ -140,7 +164,7 @@
 			<div class="content">
 				<div class="tabs">
 					<button class="tab-btn active" id="invoice-tab">Invoice Data</button>
-					<button class="tab-btn" id="settings-tab">EBM Settings</button>
+					<button class="tab-btn" id="settings-tab">ALSM EBM Settings</button>
 				</div>
 
 				<div id="invoice-content" class="tab-content active">
@@ -148,13 +172,19 @@
 					<div id="invoice-data" class="invoice-section">
 						<!-- Invoice data will be loaded here -->
 					</div>
+					
+					<div class="help-section" style="margin-top: 20px;">
+						<button class="action-btn secondary" onclick="app.showFieldGuide()">
+							📋 How to Fill EBM Fields
+						</button>
+					</div>
 				</div>
 
 				<div id="settings-content" class="tab-content">
-					<h3>EBM Configuration</h3>
+					<h3>ALSM EBM Configuration</h3>
 					<div class="settings-section">
 						<div class="setting-item">
-							<label>EBM Service URL:</label>
+							<label>ALSM EBM Service URL:</label>
 							<span class="setting-value" id="ebm-url-display">https://ed704c2185d9.ngrok-free.app</span>
 						</div>
 						

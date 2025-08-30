@@ -4,6 +4,7 @@ Main FastAPI Application - Clean Architecture with Controller Pattern
 """
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
@@ -50,6 +51,21 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://192.168.1.68:3000",
+        "http://0.0.0.0:3000",
+        # Add your specific frontend URL if different
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 # Initialize services (dependency injection)

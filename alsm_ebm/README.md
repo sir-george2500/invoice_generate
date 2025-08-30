@@ -1,95 +1,155 @@
-# Invoice Service - Zoho Widget
+# ALSM EBM Integration Plugin for Zoho Books
 
-A Zoho Finance extension widget for managing invoices with user authentication.
+This plugin by ALSM Consulting automatically integrates Zoho Books with VSDC (Virtual Sales Device Controller) for EBM (Electronic Billing Machine) invoice generation in Rwanda.
+
+## 📝 Required EBM Fields (Auto-Created)
+
+### Customer Level:
+- `cf_customer_tin` - Customer TIN (Required)
+
+### Invoice Level:  
+- `cf_tin` - Business TIN (Required)
+- `cf_purchase_code` - Purchase Code (Required) 
+- `cf_organizationname` - Organization Name
+- `cf_seller_company_address` - Seller Company Address (Required)
+- `cf_seller_company_email` - Seller Company Email (Required)
 
 ## Features
 
-- **Secure Login System**: Username/password authentication with remember me functionality
-- **Invoice Integration**: Seamlessly connects with Zoho Books invoice data
-- **Responsive Design**: Works well in the Zoho Books sidebar
-- **Real-time Updates**: Listens for invoice changes and updates automatically
-- **Export Functionality**: Ready for integration with your invoice service API
+### 🔧 Automatic Setup
+- **Custom Field Creation**: Automatically creates all required EBM custom fields
+- **Webhook Configuration**: Sets up webhooks to trigger EBM invoice generation
+- **Field Validation**: Validates that all required fields are present before generating EBM invoices
 
-## Setup
+### ⚡ Automatic Processing
+- EBM invoices are generated automatically when you create/update invoices in Zoho Books
+- Credit notes are also supported with automatic EBM processing
+- PDF receipts with QR codes are generated and available for download
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Installation & Setup
 
-2. Start the development server:
-   ```bash
-   npm start
-   ```
+### 1. Install Plugin
+1. Upload the plugin to your Zoho Books account
+2. Install it in your Zoho Books organization
 
-3. Open https://127.0.0.1:5001 and authorize the SSL certificate
+### 2. Configure Backend URL
+1. Update the webhook URL in the plugin to point to your backend service
+2. Default: `https://ed704c2185d9.ngrok-free.app` (change this to your actual backend)
 
-4. Install the widget in Zoho Books using the plugin manifest
+### 3. Run Setup Process
+1. Open any invoice in Zoho Books
+2. Look for the "ALSM EBM Integration" widget in the sidebar
+3. Click "Setup ALSM EBM Integration" 
+4. The plugin will:
+   - Create all required custom fields
+   - Configure webhooks
+   - Test the connection# VSDC EBM Integration Plugin for Zoho Books
 
-## Login Credentials (Demo)
+This plugin automatically integrates Zoho Books with VSDC (Virtual Sales Device Controller) for EBM (Electronic Billing Machine) invoice generation in Rwanda.
 
-For testing purposes, the current authentication accepts:
-- **Username**: Any valid username or email
-- **Password**: Minimum 6 characters
+## Features
 
-*Replace the `authenticateUser()` method in `app/js/extension.js` with your actual API endpoint.*
+### 🔧 Automatic Setup
+- **Custom Field Creation**: Automatically creates all required VSDC custom fields
+- **Webhook Configuration**: Sets up webhooks to trigger EBM invoice generation
+- **Field Validation**: Validates that all required fields are present before generating EBM invoices
 
-## File Structure
+### 📋 Custom Fields Added
 
-- `app/widget.html` - Main widget interface
-- `app/css/styles.css` - Styling for login and main screens
-- `app/js/extension.js` - Login logic and Zoho Finance SDK integration
-- `app/translations/en.json` - Internationalization support
-- `plugin-manifest.json` - Zoho widget configuration
+#### Customer Fields
+- **Customer TIN** (Required): Customer's Tax Identification Number
 
-## Customization
+#### Invoice Fields
+- **Business TIN** (Required): Your business Tax Identification Number  
+- **Purchase Code** (Required): Purchase order or reference code
+- **Organization Name**: Your company name for VSDC receipts
+- **Seller Company Address** (Required): Your business address  
+- **Seller Company Email** (Required): Your business email
 
-### Authentication API Integration
+### ⚡ Automatic Processing
+- EBM invoices are generated automatically when you create/update invoices in Zoho Books
+- Credit notes are also supported with automatic VSDC processing
+- PDF receipts with QR codes are generated and available for download
 
-Replace the mock authentication in `extension.js`:
+## Installation & Setup
 
-```javascript
-async authenticateUser(username, password) {
-    const response = await fetch('your-api-endpoint/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    });
-    return await response.json();
-}
-```
+### 1. Install Plugin
+1. Upload the plugin to your Zoho Books account
+2. Install it in your Zoho Books organization
 
-### Invoice Export Integration
+### 2. Configure Backend URL
+1. Update the webhook URL in the plugin to point to your backend service
+2. Default: `https://ed704c2185d9.ngrok-free.app` (change this to your actual backend)
 
-Update the `exportInvoice()` method to connect with your invoice service:
+### 3. Run Setup Process
+1. Open any invoice in Zoho Books
+2. Look for the "VSDC EBM Integration" widget in the sidebar
+3. Click "Setup VSDC Integration" 
+4. The plugin will:
+   - Create all required custom fields
+   - Configure webhooks
+   - Test the connection
 
-```javascript
-async exportInvoice() {
-    const response = await fetch('your-api-endpoint/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.invoiceData)
-    });
-    // Handle response
-}
-```
+### 4. Fill Required Fields
+After setup, you need to fill the custom fields in your invoices:
 
-## Security Notes
+#### For Each Customer:
+1. Go to **Sales → Customers**
+2. Edit customer details  
+3. Fill the **Customer TIN** field
 
-- The current implementation stores user data in localStorage for "remember me" functionality
-- In production, implement proper token-based authentication
-- Add HTTPS enforcement and proper session management
-- Validate all inputs on both client and server side
+#### For Each Invoice:
+1. When creating/editing invoices, fill these custom fields:
+   - **Business TIN** (your company's TIN)
+   - **Purchase Code** (required for VSDC)
+   - **Seller Company Address** (your business address)
+   - **Seller Company Email** (your business email)  
+   - **Organization Name** (optional, your business name)
 
-## Zoho Integration
+## Usage
 
-The widget automatically:
-- Initializes the Zoho Finance SDK
-- Retrieves current invoice data
-- Listens for invoice changes
-- Provides refresh functionality
-- Resizes appropriately for the sidebar
+### Creating EBM Invoices
+1. Create an invoice in Zoho Books as usual
+2. Ensure all required VSDC fields are filled
+3. Save the invoice
+4. The EBM invoice will be generated automatically via webhook
+5. PDF with QR code will be available for download
 
-## Development
+### Field Validation
+- The plugin shows which fields are configured and which are missing
+- Generate EBM Invoice button is disabled until all required fields are filled
+- Clear guidance on where to find and fill the custom fields
 
-The widget runs on port 5001 by default. Make sure this port is available or the system will automatically find an alternative port (5002-5009).
+### Troubleshooting
+- Use the "📋 How to Fill VSDC Fields" button for field guidance
+- Test connection feature to verify backend connectivity
+- Reconfigure webhooks if backend URL changes
+
+## Technical Details
+
+### Webhook Endpoints
+- **Invoice Webhook**: `{backend_url}/api/v1/webhooks/zoho/invoice`
+- **Credit Note Webhook**: `{backend_url}/api/v1/webhooks/zoho/credit-note`
+
+### Events Triggered
+- `invoice.created` - When new invoice is created
+- `invoice.updated` - When invoice is modified  
+- `creditnote.created` - When credit note is created
+- `creditnote.updated` - When credit note is modified
+
+### Required Permissions
+- Read/Write access to invoices and customers
+- Custom field creation and management
+- Webhook creation and management
+
+## Support
+
+For technical issues:
+1. Check that all required fields are filled
+2. Verify backend service is running
+3. Test connection using the plugin's test feature
+4. Check webhook configuration in Zoho Books settings
+
+---
+
+**Note**: This plugin requires a running backend service that handles the VSDC integration. The backend processes the webhook data and generates EBM-compliant invoices with QR codes.

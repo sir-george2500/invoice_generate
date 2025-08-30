@@ -3,17 +3,34 @@
     "en"
   ],
   "service": "FINANCE",
-  "whiteListedDomains": [],
+  "whiteListedDomains": [
+    "*.ngrok-free.app",
+    "*.ngrok.io",
+    "localhost",
+    "127.0.0.1"
+  ],
   "modules": {
     "widgets": [
       {
         "location": "invoice.creation.sidebar",
-        "name": "Finance Extension",
+        "name": "ALSM EBM Integration",
         "url": "/app/widget.html",
         "logo": "/app/img/logo.png"
       }
     ]
   },
   "config": [],
-  "usedConnections": []
+  "usedConnections": [],
+  "permissions": [
+    "ZohoBooks.invoices.READ",
+    "ZohoBooks.invoices.WRITE", 
+    "ZohoBooks.contacts.READ",
+    "ZohoBooks.contacts.WRITE",
+    "ZohoBooks.settings.READ",
+    "ZohoBooks.settings.WRITE",
+    "ZohoBooks.customfields.CREATE",
+    "ZohoBooks.customfields.READ",
+    "ZohoBooks.webhooks.CREATE",
+    "ZohoBooks.webhooks.READ"
+  ]
 }
