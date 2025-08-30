@@ -1,0 +1,45 @@
+{
+  "name": "admin-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "dev:network": "next dev --turbopack --hostname 0.0.0.0",
+    "dev:host": "next dev --turbopack --hostname 192.168.1.68",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "start:network": "next start --hostname 0.0.0.0",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.85.6",
+    "@tanstack/react-query-devtools": "^5.85.6",
+    "@types/yup": "^0.29.14",
+    "axios": "^1.11.0",
+    "formik": "^2.4.6",
+    "immer": "^10.1.1",
+    "lucide-react": "^0.542.0",
+    "next": "15.5.2",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "yup": "^1.7.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
