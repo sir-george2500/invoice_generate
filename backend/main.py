@@ -19,6 +19,8 @@ from controllers.v1.auth_controller import AuthController
 from controllers.v1.webhook_controller import WebhookController
 from controllers.v1.utility_controller import UtilityController
 from controllers.v1.business_controller import BusinessController
+from controllers.v1.report_controller import ReportController
+from controllers.v1.transaction_controller import TransactionController
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -60,12 +62,18 @@ auth_controller = AuthController()
 webhook_controller = WebhookController(vsdc_service, payload_transformer)
 utility_controller = UtilityController(pdf_service, vsdc_service, payload_transformer)
 business_controller = BusinessController()
+report_controller = ReportController()
+transaction_controller = TransactionController()
+report_controller = ReportController()
 
 # Register controller routes
 app.include_router(auth_controller.router)
 app.include_router(webhook_controller.router)
 app.include_router(utility_controller.router)
 app.include_router(business_controller.router)
+app.include_router(report_controller.router)
+app.include_router(transaction_controller.router)
+app.include_router(report_controller.router)
 
 # Global error handler
 @app.exception_handler(Exception)
