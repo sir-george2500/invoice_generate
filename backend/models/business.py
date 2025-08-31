@@ -14,6 +14,7 @@ class Business(Base):
     location: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     tin_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     phone_number: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now())

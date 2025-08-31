@@ -8,6 +8,7 @@ class BusinessBase(BaseModel):
     location: Optional[str] = Field(None, max_length=500)
     tin_number: str = Field(..., min_length=6, max_length=50)
     phone_number: Optional[str] = Field(None, max_length=20)
+    description: Optional[str] = Field(None, max_length=1000)
 
 class BusinessCreate(BusinessBase):
     admin_email: Optional[EmailStr] = None
@@ -18,6 +19,7 @@ class BusinessUpdate(BaseModel):
     location: Optional[str] = Field(None, max_length=500)
     tin_number: Optional[str] = Field(None, min_length=6, max_length=50)
     phone_number: Optional[str] = Field(None, max_length=20)
+    description: Optional[str] = Field(None, max_length=1000)
     is_active: Optional[bool] = None
 
 
