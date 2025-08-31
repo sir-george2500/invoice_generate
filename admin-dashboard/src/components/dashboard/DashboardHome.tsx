@@ -5,7 +5,8 @@ import {
   FileText, 
   Activity,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Receipt
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useBusinesses, useSystemHealth } from '@/hooks/useBusinesses';
@@ -131,24 +132,34 @@ export function DashboardHome() {
           <h3 className="text-lg leading-6 font-medium text-gray-900">
             Quick Actions
           </h3>
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <QuickActionCard
               title="Add New Business"
               description="Register a new business for EBM integration"
               icon={Building2}
               href="/dashboard/businesses?action=create"
+              color="green"
             />
             <QuickActionCard
-              title="Generate Report"
-              description="Create X or Z reports for businesses"
+              title="Generate X Report"
+              description="Generate interim daily sales report"
               icon={FileText}
               href="/dashboard/reports"
+              color="blue"
             />
             <QuickActionCard
-              title="System Health"
-              description="Monitor webhook activity and system status"
+              title="Generate Z Report"
+              description="Generate end-of-day final report"
+              icon={Receipt}
+              href="/dashboard/reports"
+              color="red"
+            />
+            <QuickActionCard
+              title="System Settings"
+              description="Monitor system health and configure settings"
               icon={Activity}
-              href="/dashboard/webhooks"
+              href="/dashboard/settings"
+              color="yellow"
             />
           </div>
         </div>
@@ -244,16 +255,24 @@ interface QuickActionCardProps {
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
+  color?: 'blue' | 'red' | 'green' | 'yellow';
 }
 
-function QuickActionCard({ title, description, icon: Icon, href }: QuickActionCardProps) {
+function QuickActionCard({ title, description, icon: Icon, href, color = 'blue' }: QuickActionCardProps) {
+  const colorClasses = {
+    blue: 'bg-blue-50 text-blue-700 group-hover:bg-blue-100',
+    red: 'bg-red-50 text-red-700 group-hover:bg-red-100',
+    green: 'bg-green-50 text-green-700 group-hover:bg-green-100',
+    yellow: 'bg-yellow-50 text-yellow-700 group-hover:bg-yellow-100',
+  };
+
   return (
     <a
       href={href}
       className="relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
     >
       <div>
-        <span className="rounded-lg inline-flex p-3 bg-blue-50 text-blue-700 group-hover:bg-blue-100">
+        <span className={`rounded-lg inline-flex p-3 ${colorClasses[color]}`}>
           <Icon className="h-6 w-6" />
         </span>
       </div>

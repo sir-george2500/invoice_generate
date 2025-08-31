@@ -46,7 +46,10 @@ interface BusinessFormValues {
 export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProps) {
   const createBusiness = useCreateBusiness();
 
-  const handleSubmit = async (values: BusinessFormValues, { setSubmitting, resetForm }: any) => {
+  const handleSubmit = async (values: BusinessFormValues, { setSubmitting, resetForm }: { 
+    setSubmitting: (isSubmitting: boolean) => void; 
+    resetForm: () => void; 
+  }) => {
     try {
       const result = await createBusiness.mutateAsync({
         name: values.name,
@@ -111,7 +114,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
                     id="name"
                     name="name"
                     type="text"
-                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500 ${
                       errors.name && touched.name
                         ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300'
@@ -133,7 +136,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
                     id="tin_number"
                     name="tin_number"
                     type="text"
-                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500 ${
                       errors.tin_number && touched.tin_number
                         ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300'
@@ -155,7 +158,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
                     id="email"
                     name="email"
                     type="email"
-                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500 ${
                       errors.email && touched.email
                         ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300'
@@ -177,7 +180,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
                     id="phone"
                     name="phone"
                     type="tel"
-                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder-gray-500 ${
                       errors.phone && touched.phone
                         ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300'
@@ -200,7 +203,7 @@ export function CreateBusinessModal({ isOpen, onClose }: CreateBusinessModalProp
                     name="address"
                     as="textarea"
                     rows={3}
-                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${
+                    className={`w-full pl-10 pr-3 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none placeholder-gray-500 ${
                       errors.address && touched.address
                         ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                         : 'border-gray-300'

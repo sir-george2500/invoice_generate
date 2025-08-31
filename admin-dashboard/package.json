@@ -19,6 +19,7 @@
     "@tanstack/react-query-devtools": "^5.85.6",
     "@types/yup": "^0.29.14",
     "axios": "^1.11.0",
+    "date-fns": "^4.1.0",
     "formik": "^2.4.6",
     "immer": "^10.1.1",
     "lucide-react": "^0.542.0",

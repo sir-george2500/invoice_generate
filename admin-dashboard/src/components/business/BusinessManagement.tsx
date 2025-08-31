@@ -87,7 +87,7 @@ export function BusinessManagement() {
               placeholder="Search businesses by name, TIN, or email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white placeholder-gray-400"
             />
           </div>
           
@@ -96,8 +96,8 @@ export function BusinessManagement() {
             <Filter className="w-4 h-4 text-gray-500" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             >
               <option value="all">All Status</option>
               <option value="active">Active Only</option>
@@ -177,7 +177,7 @@ function BusinessRow({ business, onDeactivate }: BusinessRowProps) {
   const [showActions, setShowActions] = useState(false);
 
   const handleEdit = () => {
-    alert('Edit functionality coming soon!');
+    window.location.href = `/dashboard/businesses/${business.id}/edit`;
   };
 
   const handleView = () => {

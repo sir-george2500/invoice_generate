@@ -21,6 +21,7 @@ export interface Business {
   phone_number?: string; // Alternative phone field
   address: string;
   location?: string; // Alternative address field
+  description?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -35,10 +36,14 @@ export interface BusinessCreate {
 }
 
 export interface BusinessUpdate {
+  business_name?: string;
   name?: string;
   email?: string;
+  phone_number?: string;
   phone?: string;
+  location?: string;
   address?: string;
+  description?: string;
 }
 
 // Transaction types

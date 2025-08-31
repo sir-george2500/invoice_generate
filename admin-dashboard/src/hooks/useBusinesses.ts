@@ -15,7 +15,7 @@ export const businessKeys = {
 // Businesses Query
 export function useBusinesses(params?: { skip?: number; limit?: number; active_only?: boolean }) {
   return useQuery({
-    queryKey: businessKeys.list(params),
+    queryKey: businessKeys.list(params || {}),
     queryFn: () => businessAPI.list(params),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
