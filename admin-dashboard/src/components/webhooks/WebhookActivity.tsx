@@ -8,53 +8,62 @@ import {
   XCircle,
   AlertTriangle,
   Webhook,
-  RefreshCw
+  RefreshCw,
+  Building2,
+  FileText,
+  Receipt
 } from 'lucide-react';
+import { 
+  useWebhookActivities, 
+  useWebhookStats, 
+  useFailedWebhooks,
+  type WebhookActivity 
+} from '@/hooks/useWebhookActivities';
+import { format } from 'date-fns';
 
 export function WebhookActivity() {
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Placeholder webhook data - in real implementation this would come from an API
-  const webhookLogs = [
-    {
-      id: 1,
-      timestamp: '2024-01-15 14:30:22',
-      status: 'success',
-      method: 'POST',
-      endpoint: '/api/v1/webhooks/zoho',
-      response_code: 200,
-      processing_time: '1.2s',
-      payload_size: '2.4KB'
-    },
-    {
-      id: 2,
-      timestamp: '2024-01-15 14:25:18',
-      status: 'error',
-      method: 'POST', 
-      endpoint: '/api/v1/webhooks/zoho',
-      response_code: 500,
-      processing_time: '0.8s',
-      payload_size: '1.9KB'
-    },
-    {
-      id: 3,
-      timestamp: '2024-01-15 14:20:45',
-      status: 'success',
-      method: 'POST',
-      endpoint: '/api/v1/webhooks/zoho', 
-      response_code: 200,
-      processing_time: '2.1s',
-      payload_size: '3.1KB'
-    },
-  ];
+  const [hoursBack, setHoursBack] = useState(24);
+  
+  // Real data from our webhook activity system
+  const { data: activitiesData, isLoading: loadingActivities, refetch: refetchActivities } = useWebhookActivities({
+    hours_back: hoursBack,
+    limit: 20
+  });
+  
+  const { data: statsData, isLoading: loadingStats } = useWebhookStats({
+    days_back: 7
+  });
+  
+  const { data: failuresData } = useFailedWebhooks(24);
+  
+  const isLoading = loadingActivities || loadingStats;
+  
+  const activities: WebhookActivity[] = activitiesData?.activities || [];
+  const stats = statsData?.statistics || {
+    total_webhooks: 0,
+    successful: 0,
+    failed: 0,
+    pending: 0,
+    avg_processing_time_ms: 0,
+    success_rate: 0
+  };
+  const recentFailures = failuresData?.failed_webhooks || [];
+  
+  const handleRefresh = () => {
+    refetchActivities();
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
         return CheckCircle;
-      case 'error':
+      case 'failed':
         return XCircle;
-      case 'warning':
+      case 'retry':
+        return RefreshCw;
+      case 'timeout':
+        return Clock;
+      case 'pending':
         return AlertTriangle;
       default:
         return Clock;
@@ -65,12 +74,27 @@ export function WebhookActivity() {
     switch (status) {
       case 'success':
         return 'text-green-600 bg-green-100';
-      case 'error':
+      case 'failed':
         return 'text-red-600 bg-red-100';
-      case 'warning':
+      case 'retry':
         return 'text-yellow-600 bg-yellow-100';
+      case 'timeout':
+        return 'text-orange-600 bg-orange-100';
+      case 'pending':
+        return 'text-blue-600 bg-blue-100';
       default:
         return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getWebhookTypeIcon = (type: string) => {
+    switch (type) {
+      case 'invoice':
+        return FileText;
+      case 'credit_note':
+        return Receipt;
+      default:
+        return Webhook;
     }
   };
 
@@ -85,9 +109,19 @@ export function WebhookActivity() {
           </p>
         </div>
         
-        <div className="mt-4 lg:mt-0">
+        <div className="mt-4 lg:mt-0 flex items-center space-x-3">
+          <select
+            value={hoursBack}
+            onChange={(e) => setHoursBack(Number(e.target.value))}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value={1}>Last Hour</option>
+            <option value={24}>Last 24 Hours</option>
+            <option value={168}>Last Week</option>
+          </select>
+          
           <button
-            onClick={() => setIsLoading(!isLoading)}
+            onClick={handleRefresh}
             disabled={isLoading}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 transition-colors"
           >
@@ -110,7 +144,9 @@ export function WebhookActivity() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Total Requests
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">1,247</dd>
+                  <dd className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : stats.total_webhooks.toLocaleString()}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -128,7 +164,9 @@ export function WebhookActivity() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Success Rate
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">98.2%</dd>
+                  <dd className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : `${stats.success_rate.toFixed(1)}%`}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -146,7 +184,9 @@ export function WebhookActivity() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Avg Response Time
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">1.4s</dd>
+                  <dd className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : `${(stats.avg_processing_time_ms / 1000).toFixed(1)}s`}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -164,7 +204,9 @@ export function WebhookActivity() {
                   <dt className="text-sm font-medium text-gray-500 truncate">
                     Failed Today
                   </dt>
-                  <dd className="text-2xl font-bold text-gray-900">3</dd>
+                  <dd className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : recentFailures.length}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -179,53 +221,113 @@ export function WebhookActivity() {
             Recent Webhook Activity
           </h3>
           
-          <div className="flow-root">
-            <ul className="-mb-8">
-              {webhookLogs.map((log, logIdx) => {
-                const StatusIcon = getStatusIcon(log.status);
-                
-                return (
-                  <li key={log.id}>
-                    <div className="relative pb-8">
-                      {logIdx !== webhookLogs.length - 1 ? (
-                        <span
-                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      <div className="relative flex space-x-3">
-                        <div>
-                          <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${getStatusColor(log.status)}`}>
-                            <StatusIcon className="h-5 w-5" />
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-600">Loading webhook activities...</span>
+            </div>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-8">
+              <Webhook className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium">No webhook activity found</p>
+              <p className="text-gray-500 text-sm">
+                {hoursBack === 1 ? 'No webhooks in the last hour' :
+                 hoursBack === 24 ? 'No webhooks in the last 24 hours' :
+                 'No webhooks in the last week'}
+              </p>
+            </div>
+          ) : (
+            <div className="flow-root">
+              <ul className="-mb-8">
+                {activities.map((activity, activityIdx) => {
+                  const StatusIcon = getStatusIcon(activity.status);
+                  const TypeIcon = getWebhookTypeIcon(activity.webhook_type);
+                  
+                  return (
+                    <li key={activity.id}>
+                      <div className="relative pb-8">
+                        {activityIdx !== activities.length - 1 ? (
+                          <span
+                            className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        <div className="relative flex space-x-3">
                           <div>
-                            <p className="text-sm text-gray-500">
-                              <span className="font-medium text-gray-900">{log.method}</span>{' '}
-                              request to <span className="font-medium">{log.endpoint}</span>
-                            </p>
-                            <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                log.response_code >= 200 && log.response_code < 300 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                              }`}>
-                                {log.response_code}
-                              </span>
-                              <span>Processing time: {log.processing_time}</span>
-                              <span>Size: {log.payload_size}</span>
-                            </div>
+                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${getStatusColor(activity.status)}`}>
+                              <StatusIcon className="h-4 w-4" />
+                            </span>
                           </div>
-                          <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                            <time>{log.timestamp}</time>
+                          <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <TypeIcon className="h-4 w-4 text-gray-400" />
+                                <p className="text-sm text-gray-500">
+                                  <span className="font-medium text-gray-900 capitalize">{activity.webhook_type}</span>{' '}
+                                  webhook {activity.status === 'success' ? 'processed successfully' : 'failed'}
+                                </p>
+                              </div>
+                              
+                              <div className="mt-1 space-y-1">
+                                {activity.business_tin && (
+                                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                    <Building2 className="h-3 w-3 text-gray-400" />
+                                    <span>TIN: {activity.business_tin}</span>
+                                    {activity.business_name && (
+                                      <span>({activity.business_name})</span>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                {activity.invoice_number && (
+                                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                    <span className="font-medium">Invoice: {activity.invoice_number}</span>
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
+                                    {activity.status.toUpperCase()}
+                                  </span>
+                                  
+                                  {activity.processing_time_ms && (
+                                    <span>Processing: {(activity.processing_time_ms / 1000).toFixed(2)}s</span>
+                                  )}
+                                  
+                                  {activity.vsdc_receipt_number && (
+                                    <span>Receipt: {activity.vsdc_receipt_number}</span>
+                                  )}
+                                  
+                                  {activity.pdf_generated && (
+                                    <span className="text-green-600">PDF ✓</span>
+                                  )}
+                                  
+                                  {activity.retry_count > 0 && (
+                                    <span className="text-yellow-600">Retries: {activity.retry_count}</span>
+                                  )}
+                                </div>
+                                
+                                {activity.error_message && (
+                                  <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                                    <strong>Error:</strong> {activity.error_message}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                              <time>
+                                {activity.created_at ? format(new Date(activity.created_at), 'MMM dd, HH:mm:ss') : 'Unknown'}
+                              </time>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 
@@ -240,10 +342,13 @@ export function WebhookActivity() {
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Webhook className="h-5 w-5 text-blue-600 mr-3" />
+                  <FileText className="h-5 w-5 text-blue-600 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Zoho Books Webhook</p>
-                    <p className="text-sm text-gray-500">/api/v1/webhooks/zoho</p>
+                    <p className="text-sm font-medium text-gray-900">Zoho Invoice Webhook</p>
+                    <p className="text-sm text-gray-500 font-mono">/api/v1/webhooks/zoho/invoice</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Invoices: {stats.by_type?.invoices || 0} processed
+                    </p>
                   </div>
                 </div>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -255,10 +360,13 @@ export function WebhookActivity() {
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Webhook className="h-5 w-5 text-purple-600 mr-3" />
+                  <Receipt className="h-5 w-5 text-purple-600 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">EBM Integration</p>
-                    <p className="text-sm text-gray-500">/api/v1/vsdc/process</p>
+                    <p className="text-sm font-medium text-gray-900">Credit Note Webhook</p>
+                    <p className="text-sm text-gray-500 font-mono">/api/v1/webhooks/zoho/credit-note</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Credit Notes: {stats.by_type?.credit_notes || 0} processed
+                    </p>
                   </div>
                 </div>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -267,6 +375,32 @@ export function WebhookActivity() {
               </div>
             </div>
           </div>
+          
+          {recentFailures.length > 0 && (
+            <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-red-800 mb-2">Recent Failures Requiring Attention</h4>
+              <div className="space-y-2">
+                {recentFailures.slice(0, 3).map((failure: any) => (
+                  <div key={failure.id} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      <span className="font-medium">{failure.business_tin}</span>
+                      <span>({failure.business_name})</span>
+                      {failure.invoice_number && <span>- {failure.invoice_number}</span>}
+                    </div>
+                    <span className="text-red-600 text-xs">
+                      {failure.error_code && `Error ${failure.error_code}`}
+                    </span>
+                  </div>
+                ))}
+                {recentFailures.length > 3 && (
+                  <p className="text-xs text-red-600 mt-2">
+                    +{recentFailures.length - 3} more failures in the last 24 hours
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

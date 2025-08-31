@@ -1,13 +1,18 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 import httpx
 import logging
 import json
 from datetime import datetime
+import time
 
 from services.vsdc_service import VSSDCInvoiceService
 from services.payload_transformer import PayloadTransformer
+from services.webhook_activity_service import WebhookActivityService
+from models.webhook_activity import WebhookType
 from config.settings import settings
+from database.connection import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -158,12 +163,33 @@ class WebhookController:
         except Exception as e:
             logger.warning(f"Error logging business info: {str(e)}")
 
-    async def handle_zoho_invoice_webhook(self, request: Request):
+    async def handle_zoho_invoice_webhook(self, request: Request, db: Session = Depends(get_db)):
         """Enhanced webhook endpoint with dynamic tax calculation and proper VSDC error handling"""
+        start_time = time.time()
+        webhook_activity_service = WebhookActivityService(db)
+        activity_id = None
+        
         try:
             # Get the raw JSON payload
             zoho_payload = await request.json()
             logger.info(f"Received Zoho webhook payload")
+            
+            # Extract business information for logging
+            business_tin, business_name, invoice_number = webhook_activity_service.extract_business_info_from_payload(
+                zoho_payload, WebhookType.INVOICE
+            )
+            
+            # Create webhook activity record
+            activity = webhook_activity_service.create_webhook_activity(
+                webhook_type=WebhookType.INVOICE,
+                business_tin=business_tin,
+                business_name=business_name,
+                invoice_number=invoice_number,
+                zoho_payload=zoho_payload
+            )
+            activity_id = activity.id
+            
+            logger.info(f"Created webhook activity #{activity_id} for invoice: {invoice_number}, business: {business_tin}")
             
             # Transform Zoho payload to VSDC format
             vsdc_payload = self.payload_transformer.transform_zoho_to_vsdc(zoho_payload)
@@ -230,6 +256,17 @@ class WebhookController:
                                 vsdc_payload=vsdc_payload
                             )
                             
+                            # Update activity with success
+                            processing_time_ms = int((time.time() - start_time) * 1000)
+                            if activity_id:
+                                webhook_activity_service.update_webhook_success(
+                                    activity_id=activity_id,
+                                    vsdc_payload=vsdc_payload,
+                                    vsdc_response=ebm_response,
+                                    processing_time_ms=processing_time_ms,
+                                    pdf_filename=pdf_result.get('pdf_filename')
+                                )
+                            
                             # Enhanced response with business info
                             return JSONResponse(
                                 status_code=200,
@@ -249,13 +286,27 @@ class WebhookController:
                                         "total_tax_a": f"{ebm_response.get('taxAmtA', 0):,.2f}",
                                         "total_tax_b": f"{ebm_response.get('taxAmtB', 0):,.2f}",
                                         "total_tax": f"{ebm_response.get('totTaxAmt', 0):,.2f}"
-                                    }
+                                    },
+                                    "webhook_activity_id": activity_id,
+                                    "processing_time_ms": int((time.time() - start_time) * 1000)
                                 }
                             )
                             
                         except Exception as pdf_error:
                             logger.error(f"Error generating advanced PDF: {str(pdf_error)}")
                             logger.error(f"PDF Error Details: {pdf_error.__class__.__name__}: {str(pdf_error)}")
+                            
+                            # Update activity with partial success (VSDC success, PDF failure)
+                            processing_time_ms = int((time.time() - start_time) * 1000)
+                            if activity_id:
+                                webhook_activity_service.update_webhook_success(
+                                    activity_id=activity_id,
+                                    vsdc_payload=vsdc_payload,
+                                    vsdc_response=ebm_response,
+                                    processing_time_ms=processing_time_ms,
+                                    pdf_filename=None
+                                )
+                            
                             return JSONResponse(
                                 status_code=200,
                                 content={
@@ -272,12 +323,26 @@ class WebhookController:
                                         "total_tax_a": f"{ebm_response.get('taxAmtA', 0):,.2f}",
                                         "total_tax_b": f"{ebm_response.get('taxAmtB', 0):,.2f}",
                                         "total_tax": f"{ebm_response.get('totTaxAmt', 0):,.2f}"
-                                    }
+                                    },
+                                    "webhook_activity_id": activity_id
                                 }
                             )
                     else:
                         # VSDC API returned an error
                         logger.error(f"VSDC API error - Code: {result_code}, Message: {result_message}")
+                        
+                        # Update activity with VSDC failure
+                        processing_time_ms = int((time.time() - start_time) * 1000)
+                        if activity_id:
+                            webhook_activity_service.update_webhook_failure(
+                                activity_id=activity_id,
+                                error_code=result_code,
+                                error_message=result_message,
+                                error_type="vsdc_business_logic_error",
+                                processing_time_ms=processing_time_ms,
+                                vsdc_payload=vsdc_payload,
+                                vsdc_response=ebm_response
+                            )
                         
                         # Map common VSDC error codes to appropriate HTTP status codes
                         error_mapping = {
@@ -299,27 +364,44 @@ class WebhookController:
                             content={
                                 "message": "VSDC API processing failed",
                                 "invoice_number": vsdc_payload["invcNo"],
+                                "business_tin": business_tin,
                                 "vsdc_error": {
                                     "code": result_code,
                                     "message": result_message,
                                     "full_response": ebm_response
                                 },
-                                "error_type": "vsdc_business_logic_error"
+                                "error_type": "vsdc_business_logic_error",
+                                "webhook_activity_id": activity_id
                             }
                         )
                 else:
                     # HTTP-level error (network, server down, etc.)
                     logger.error(f"HTTP error from VSDC API: {response.status_code} - {response.text}")
+                    
+                    # Update activity with communication failure
+                    processing_time_ms = int((time.time() - start_time) * 1000)
+                    if activity_id:
+                        webhook_activity_service.update_webhook_failure(
+                            activity_id=activity_id,
+                            error_code=str(response.status_code),
+                            error_message=f"HTTP {response.status_code}: {response.text}",
+                            error_type="vsdc_communication_error",
+                            processing_time_ms=processing_time_ms,
+                            vsdc_payload=vsdc_payload
+                        )
+                    
                     return JSONResponse(
                         status_code=502,
                         content={
                             "message": "Failed to communicate with VSDC API",
                             "invoice_number": vsdc_payload["invcNo"],
+                            "business_tin": business_tin,
                             "http_error": {
                                 "status_code": response.status_code,
                                 "response_text": response.text
                             },
-                            "error_type": "vsdc_communication_error"
+                            "error_type": "vsdc_communication_error",
+                            "webhook_activity_id": activity_id
                         }
                     )
                     
@@ -327,21 +409,55 @@ class WebhookController:
             raise
         except Exception as e:
             logger.error(f"Error processing webhook: {str(e)}")
+            
+            # Update activity with internal error
+            processing_time_ms = int((time.time() - start_time) * 1000)
+            if activity_id:
+                webhook_activity_service.update_webhook_failure(
+                    activity_id=activity_id,
+                    error_code="500",
+                    error_message=str(e),
+                    error_type="internal_processing_error",
+                    processing_time_ms=processing_time_ms
+                )
+            
             return JSONResponse(
                 status_code=500,
                 content={
                     "message": "Internal server error while processing webhook",
                     "error": str(e),
-                    "error_type": "internal_processing_error"
+                    "error_type": "internal_processing_error",
+                    "webhook_activity_id": activity_id
                 }
             )
 
-    async def handle_zoho_credit_note_webhook(self, request: Request):
+    async def handle_zoho_credit_note_webhook(self, request: Request, db: Session = Depends(get_db)):
         """Enhanced credit note webhook endpoint with dynamic tax calculation and proper VSDC error handling"""
+        start_time = time.time()
+        webhook_activity_service = WebhookActivityService(db)
+        activity_id = None
+        
         try:
             # Get the raw JSON payload
             zoho_payload = await request.json()
             logger.info(f"Received Zoho credit note webhook payload")
+            
+            # Extract business information for logging
+            business_tin, business_name, credit_note_number = webhook_activity_service.extract_business_info_from_payload(
+                zoho_payload, WebhookType.CREDIT_NOTE
+            )
+            
+            # Create webhook activity record
+            activity = webhook_activity_service.create_webhook_activity(
+                webhook_type=WebhookType.CREDIT_NOTE,
+                business_tin=business_tin,
+                business_name=business_name,
+                invoice_number=credit_note_number,
+                zoho_payload=zoho_payload
+            )
+            activity_id = activity.id
+            
+            logger.info(f"Created webhook activity #{activity_id} for credit note: {credit_note_number}, business: {business_tin}")
             
             # Enhanced payload structure logging
             logger.info(f"Credit note payload structure: {list(zoho_payload.keys())}")
