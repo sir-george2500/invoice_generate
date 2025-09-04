@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>EBM Integration Plugin</title>
+	<style>
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			margin: 0;
+			padding: 15px;
+			background: #f8f9fa;
+			color: #333;
+		}
+		
+		.container {
+			max-width: 400px;
+			margin: 0 auto;
+		}
+		
+		.card {
+			background: white;
+			border-radius: 8px;
+			padding: 20px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+			margin-bottom: 15px;
+		}
+		
+		.login-form h3 {
+			margin: 0 0 20px 0;
+			color: #2c3e50;
+			text-align: center;
+		}
+		
+		.form-group {
+			margin-bottom: 15px;
+		}
+		
+		.form-group label {
+			display: block;
+			margin-bottom: 5px;
+			font-weight: 600;
+			color: #555;
+		}
+		
+		.form-group input {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 14px;
+			box-sizing: border-box;
+		}
+		
+		.form-group input:focus {
+			outline: none;
+			border-color: #007bff;
+			box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+		}
+		
+		.btn {
+			width: 100%;
+			padding: 12px;
+			background: #007bff;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background-color 0.2s;
+		}
+		
+		.btn:hover {
+			background: #0056b3;
+		}
+		
+		.btn:disabled {
+			background: #ccc;
+			cursor: not-allowed;
+		}
+		
+		.error {
+			background: #f8d7da;
+			color: #721c24;
+			padding: 10px;
+			border-radius: 4px;
+			margin: 10px 0;
+			font-size: 14px;
+		}
+		
+		.success {
+			background: #d4edda;
+			color: #155724;
+			padding: 10px;
+			border-radius: 4px;
+			margin: 10px 0;
+			font-size: 14px;
+		}
+		
+		.user-info {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 15px;
+		}
+		
+		.user-info .username {
+			font-weight: 600;
+			color: #2c3e50;
+		}
+		
+		.btn-logout {
+			padding: 6px 12px;
+			background: #dc3545;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			font-size: 12px;
+			cursor: pointer;
+		}
+		
+		.btn-logout:hover {
+			background: #c82333;
+		}
+		
+		.status {
+			padding: 10px;
+			border-radius: 4px;
+			margin: 10px 0;
+			font-size: 14px;
+		}
+		
+		.status.loading {
+			background: #e3f2fd;
+			color: #1976d2;
+		}
+		
+		.hidden {
+			display: none;
+		}
+		
+		.text-center {
+			text-align: center;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<!-- Login Form -->
+		<div id="login-container" class="card login-form">
+			<h3>🔐 EBM Service Login</h3>
+			<form id="loginForm">
+				<div class="form-group">
+					<label for="username">Username</label>
+					<input type="text" id="username" name="username" required autocomplete="username">
+				</div>
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input type="password" id="password" name="password" required autocomplete="current-password">
+				</div>
+				<button type="submit" class="btn" id="loginBtn">Login</button>
+			</form>
+			<div id="login-error" class="error hidden"></div>
+			<div id="login-status" class="status loading hidden"></div>
+		</div>
+		
+		<!-- Main Interface -->
+		<div id="main-container" class="hidden">
+			<div class="card">
+				<div class="user-info">
+					<div>
+						<span class="username" id="current-username">Loading...</span>
+						<div style="font-size: 12px; color: #666;" id="user-role"></div>
+					</div>
+					<button class="btn-logout" id="logout-btn">Logout</button>
+				</div>
+			</div>
+			
+			<div class="card">
+				<h4 style="margin-top: 0;">📊 EBM Integration Status</h4>
+				<div id="ebm-status" class="text-center">
+					<div class="status loading">Initializing EBM service...</div>
+				</div>
+			</div>
+			
+			<div class="card">
+				<h4 style="margin-top: 0;">🧾 Current Invoice</h4>
+				<div id="invoice-info">
+					<div class="status loading">Loading invoice data...</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://js.zohostatic.com/zohofinance/v1/zf_sdk.js"></script>
+	<script src="./js/extension.js"></script>
+</body>
+
+</html>

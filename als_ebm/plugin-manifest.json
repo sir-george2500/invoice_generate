@@ -1,0 +1,41 @@
+{
+  "locale": [
+    "en"
+  ],
+  "service": "FINANCE",
+  "whiteListedDomains": [
+    "7f4dcaa9ece9.ngrok-free.app",
+    "*.ngrok-free.app",
+    "*.ngrok.io"
+  ],
+  "cspDomains": {
+    "connect-src": [
+      "https://7f4dcaa9ece9.ngrok-free.app",
+      "https://*.ngrok-free.app",
+      "https://*.ngrok.io",
+      "wss://7f4dcaa9ece9.ngrok-free.app",
+      "wss://*.ngrok-free.app"
+    ],
+    "script-src": [
+      "'self'",
+      "'unsafe-inline'",
+      "https://js.zohostatic.com"
+    ],
+    "style-src": [
+      "'self'",
+      "'unsafe-inline'"
+    ]
+  },
+  "modules": {
+    "widgets": [
+      {
+        "location": "invoice.creation.sidebar", 
+        "name": "EBM Integration",
+        "url": "/app/widget.html",
+        "logo": "/app/img/logo.png"
+      }
+    ]
+  },
+  "config": [],
+  "usedConnections": []
+}
