@@ -31,11 +31,11 @@ export function useAuth() {
     queryFn: async () => {
       const token = getStoredToken();
       if (!token) return null;
-      
+
       // Try to get from storage first (instant)
       const storedUser = getStoredUser();
       if (storedUser) return storedUser;
-      
+
       // Fallback to API verification
       return authAPI.me();
     },
@@ -56,13 +56,13 @@ export function useAuth() {
       // Store auth data
       localStorage.setItem('admin_token', authResponse.access_token);
       localStorage.setItem('admin_user', JSON.stringify(authResponse.user));
-      
+
       // Set cookie (remove secure for development)
       document.cookie = `admin_token=${authResponse.access_token}; path=/; max-age=${authResponse.expires_in}; samesite=lax`;
 
       // Update cache immediately
       queryClient.setQueryData(['auth', 'user'], authResponse.user);
-      
+
       // Navigate immediately
       window.location.href = '/dashboard';
     },
@@ -75,13 +75,13 @@ export function useAuth() {
     // Clear storage
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-    
+
     // Clear cookie
     document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    
+
     // Clear all queries
     queryClient.clear();
-    
+
     // Navigate to login
     window.location.href = '/';
   };

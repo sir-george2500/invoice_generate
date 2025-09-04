@@ -95,3 +95,14 @@ class BusinessRepository:
         if active_only:
             query = query.filter(Business.is_active == True)
         return query.count()
+    
+    def get_by_zoho_org_id(self, zoho_org_id: str) -> Optional[Business]:
+        """Get business by Zoho organization ID"""
+        return self.db.query(Business).filter(Business.zoho_organization_id == zoho_org_id).first()
+    
+    def exists_by_zoho_org_id(self, zoho_org_id: str, exclude_id: Optional[int] = None) -> bool:
+        """Check if business exists by Zoho organization ID"""
+        query = self.db.query(Business).filter(Business.zoho_organization_id == zoho_org_id)
+        if exclude_id:
+            query = query.filter(Business.id != exclude_id)
+        return query.first() is not None

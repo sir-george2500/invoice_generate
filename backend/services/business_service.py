@@ -8,7 +8,7 @@ from models.business import Business
 from models.user import User
 from repositories.business_repository import BusinessRepository
 from repositories.user_repository import UserRepository
-from schemas.business_schemas import BusinessCreate, BusinessUpdate
+from schemas.business_schemas import BusinessCreate, BusinessUpdate, ZohoBusinessProfile
 from services.auth_service import AuthService
 
 class BusinessService:
@@ -190,5 +190,37 @@ class BusinessService:
                 self.user_repo.update(user)
         
         return success
+    
+    def get_business_by_zoho_org(self, zoho_org_id: str) -> Optional[Business]:
+        """Get business by Zoho organization ID"""
+        return self.business_repo.get_by_zoho_org_id(zoho_org_id)
+    
+    def link_business_to_zoho_org(self, business_id: int, zoho_org_id: str) -> Optional[Business]:
+        """Link existing business to Zoho organization ID"""
+        from datetime import datetime
+        
+        # Check if business exists
+        existing_business = self.business_repo.get_by_id(business_id)
+        if not existing_business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business not found"
+            )
+        
+        # Check if Zoho org ID is already linked to another business
+        existing_zoho_link = self.business_repo.get_by_zoho_org_id(zoho_org_id)
+        if existing_zoho_link and existing_zoho_link.id != business_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Zoho organization is already linked to another business"
+            )
+        
+        # Link business to Zoho org
+        update_data = {
+            "zoho_organization_id": zoho_org_id,
+            "setup_completed_at": datetime.now()
+        }
+        
+        return self.business_repo.update(business_id, **update_data)
     
 

@@ -10,7 +10,9 @@ from schemas.business_schemas import (
     BusinessUpdate, 
     BusinessResponse, 
     BusinessSummary,
-    BusinessCreateResponse
+    BusinessCreateResponse,
+    ZohoBusinessProfile,
+    ZohoBusinessProfileResponse
 )
 from services.business_service import BusinessService
 from middleware.dependencies import get_current_user
@@ -107,6 +109,31 @@ class BusinessController:
             description="Get current user's business information",
         )
         
+        # Zoho Plugin Integration endpoints
+        self.router.add_api_route(
+            "/zoho/link", 
+            self.link_business_to_zoho, 
+            methods=["POST"],
+            summary="Link Business to Zoho Organization",
+            description="Link authenticated business to Zoho organization ID",
+        )
+        
+        self.router.add_api_route(
+            "/zoho/lookup/{zoho_org_id}", 
+            self.lookup_business_by_zoho_org, 
+            methods=["GET"],
+            summary="Lookup Business by Zoho Org ID",
+            description="Retrieve business profile for auto-population in Zoho plugin",
+        )
+        
+        self.router.add_api_route(
+            "/zoho/fields/{zoho_org_id}", 
+            self.get_business_fields_for_invoice, 
+            methods=["GET"],
+            summary="Get Business Fields for Auto-Population",
+            description="Get only business fields that should be auto-populated in invoices",
+        )
+        
 
     
 
@@ -182,6 +209,111 @@ class BusinessController:
             )
         
         return BusinessResponse.model_validate(business)
+    
+    async def link_business_to_zoho(
+        self,
+        request: dict,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        """Link authenticated business to Zoho organization ID"""
+        if not current_user.business_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User must be associated with a business"
+            )
+        
+        zoho_org_id = request.get("zoho_organization_id")
+        if not zoho_org_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="zoho_organization_id is required"
+            )
+        
+        business_service = BusinessService(db)
+        
+        # Check if this Zoho org is already linked to another business
+        existing_business = business_service.get_business_by_zoho_org(zoho_org_id)
+        if existing_business and existing_business.id != current_user.business_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Zoho organization is already linked to another business"
+            )
+        
+        # Link the business to Zoho org
+        updated_business = business_service.link_business_to_zoho_org(
+            current_user.business_id, zoho_org_id
+        )
+        
+        if not updated_business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business not found"
+            )
+        
+        return {
+            "message": "Business successfully linked to Zoho organization",
+            "business_id": updated_business.id,
+            "business_name": updated_business.business_name,
+            "zoho_organization_id": updated_business.zoho_organization_id,
+            "setup_completed": True
+        }
+    
+    async def lookup_business_by_zoho_org(
+        self,
+        zoho_org_id: str,
+        db: Session = Depends(get_db)
+    ):
+        """Lookup business profile by Zoho organization ID"""
+        business_service = BusinessService(db)
+        business = business_service.get_business_by_zoho_org(zoho_org_id)
+        
+        if not business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No business profile found for this Zoho organization. Please contact support."
+            )
+        
+        return {
+            "business_id": business.id,
+            "business_name": business.business_name,
+            "tin_number": business.tin_number,
+            "email": business.email,
+            "location": business.location,
+            "phone_number": business.phone_number,
+            "is_active": business.is_active,
+            "setup_completed_at": business.setup_completed_at
+        }
+    
+    async def get_business_fields_for_invoice(
+        self,
+        zoho_org_id: str,
+        db: Session = Depends(get_db)
+    ):
+        """Get only business fields that should be auto-populated in invoices"""
+        business_service = BusinessService(db)
+        business = business_service.get_business_by_zoho_org(zoho_org_id)
+        
+        if not business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business profile not found"
+            )
+        
+        # Return ONLY business fields - customer fields must be entered by user
+        # Return ONLY business fields - customer and purchase code are manual
+        return {
+            "business_fields": {
+                "cf_tin": business.tin_number,
+                "cf_seller_company_address": business.location, 
+                "cf_seller_company_email": business.email,
+                "cf_organizationname": business.business_name
+            },
+            "manual_fields_note": "Customer TIN and Purchase Code must be entered manually by user",
+            "purchase_code_note": "Purchase Code is like OTP - get from RRA website for each invoice",
+            "default_currency": business.default_currency or "RWF",
+            "business_name": business.business_name
+        }
     
     async def update_business(
         self,

@@ -54,19 +54,41 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Add CORS middleware - Comprehensive for Zoho integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://192.168.1.68:3000",
-        "http://0.0.0.0:3000",
-        # Add your specific frontend URL if different
+        # Zoho domains
+        "https://books.zoho.com",
+        "https://books.zoho.eu", 
+        "https://books.zoho.in",
+        "https://books.zoho.com.au",
+        "https://books.zoho.jp",
+        # Local development
+        "https://127.0.0.1:5000",
+        "https://localhost:5000",
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+        # Ngrok for development
+        "https://*.ngrok-free.app",
+        "https://*.ngrok.io",
+        # Development wildcard (remove in production)
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language", 
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers"
+    ],
+    expose_headers=["*"]
 )
 
 # Initialize services (dependency injection)
@@ -90,7 +112,26 @@ app.include_router(utility_controller.router)
 app.include_router(business_controller.router)
 app.include_router(report_controller.router)
 app.include_router(transaction_controller.router)
-app.include_router(webhook_activity_controller.router)
+app.include_router(webhook_activity_controller.router)# Add health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": "ALSM EBM Service",
+        "version": "2.0.0"
+    }
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "ALSM EBM Service API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 # Global error handler
 @app.exception_handler(Exception)
