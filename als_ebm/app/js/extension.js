@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: 'https://7f4dcaa9ece9.ngrok-free.app/api/v1',
+  API_BASE_URL: 'https://75d163b48c76.ngrok-free.app/api/v1',
   SESSION_STORAGE_KEY: 'ebm_session_id'
 };
 
@@ -511,6 +511,22 @@ class EBMPlugin {
     }
   }
 }
+
+// Password toggle function
+window.togglePassword = function() {
+  const passwordInput = document.getElementById('password');
+  const toggleButton = document.getElementById('passwordToggle');
+
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    toggleButton.textContent = '🙈'; // closed eye emoji
+    toggleButton.setAttribute('aria-label', 'Hide password');
+  } else {
+    passwordInput.type = 'password';
+    toggleButton.textContent = '👁️'; // open eye emoji
+    toggleButton.setAttribute('aria-label', 'Show password');
+  }
+};
 
 // Debug functions for testing localStorage
 window.debugLocalStorage = function() {
