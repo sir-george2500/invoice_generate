@@ -113,11 +113,12 @@ export function LoginPage() {
                         id="username"
                         name="username"
                         type="text"
-                        className={`block w-full pl-10 pr-3 py-3 text-gray-900 bg-white border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 transition-colors ${errors.username && touched.username
+                        autoComplete="username"
+                        className={`block w-full pl-10 pr-3 py-3 text-gray-900 bg-white border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 transition-colors ${errors.username && touched.username
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                           : 'border-gray-300'
                           }`}
-                        placeholder="Enter your username"
+                        placeholder="Enter your administrator username"
                       />
                     </div>
                     {errors.username && touched.username && (
@@ -135,11 +136,12 @@ export function LoginPage() {
                         id="password"
                         name="password"
                         type={showPassword ? 'text' : 'password'}
-                        className={`block w-full pl-10 pr-10 py-3 text-gray-900 bg-white border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500 transition-colors ${errors.password && touched.password
+                        autoComplete="current-password"
+                        className={`block w-full pl-10 pr-10 py-3 text-gray-900 bg-white border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 transition-colors ${errors.password && touched.password
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                           : 'border-gray-300'
                           }`}
-                        placeholder="Enter your password"
+                        placeholder="Enter your secure password"
                       />
                       <button
                         type="button"
