@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
-import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ClientOnly } from '@/components/ClientOnly';
 
@@ -28,7 +29,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const { isAuthenticated, isLoading, login, error } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
 
   // Check if already logged in
   useEffect(() => {
@@ -41,7 +42,7 @@ export function LoginPage() {
     try {
       await login(values);
       // Navigation handled automatically in useAuth hook
-    } catch (error) {
+    } catch {
       // Error handling is done by React Query
     }
   };
@@ -59,21 +60,17 @@ export function LoginPage() {
             <div className="text-center mb-8">
               {/* Use the actual logo */}
               <div className="mx-auto w-20 h-20 mb-4 flex items-center justify-center">
-                <img
+                <Image
                   src="/logo.png"
                   alt="ALSM EBM Logo"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    // Fallback to icon if logo fails to load
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const fallback = target.nextElementSibling as HTMLDivElement;
-                    if (fallback) fallback.style.display = 'flex';
+                  width={80}
+                  height={80}
+                  className="object-contain"
+                  priority
+                  onError={() => {
+                    // Fallback handled by next/image
                   }}
                 />
-                <div className="w-16 h-16 bg-blue-600 rounded-full items-center justify-center hidden">
-                  <Lock className="w-8 h-8 text-white" />
-                </div>
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">ALSM EBM Admin</h1>
               <p className="text-sm text-gray-600">
@@ -94,14 +91,7 @@ export function LoginPage() {
                 values: LoginFormValues;
               }) => (
                 <Form className="space-y-6">
-                  {!!error && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 flex items-center space-x-2">
-                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                      <span className="text-sm text-red-800 font-medium">
-                        Login failed. Please try again.
-                      </span>
-                    </div>
-                  )}
+
 
                   <div>
                     <label htmlFor="username" className="block text-sm font-semibold text-gray-800 mb-2">

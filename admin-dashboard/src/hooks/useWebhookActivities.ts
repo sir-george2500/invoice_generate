@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { utilityAPI } from '@/lib/api';
 
 // Types for webhook activities
 export interface WebhookActivity {

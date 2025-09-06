@@ -17,6 +17,11 @@ export function DashboardHome() {
   const { data: businesses = [], isLoading: businessLoading, error: businessError } = useBusinesses({ limit: 100 });
   const { data: healthData, isLoading: healthLoading, error: healthError } = useSystemHealth();
 
+  // Type guard for health data
+  const services = healthData && typeof healthData === 'object' && 'services' in healthData 
+    ? healthData.services as Record<string, string>
+    : undefined;
+
   const activeBusinesses = businesses.filter(b => b.is_active).length;
   const stats = [
     {
@@ -37,18 +42,18 @@ export function DashboardHome() {
     },
     {
       name: 'EBM Service',
-      value: (healthData as any)?.services?.vsdc_service === 'initialized' ? 'Online' : healthLoading ? '...' : 'Offline',
-      subtext: `PDF: ${(healthData as any)?.services?.pdf_service === 'initialized' ? 'Ready' : 'Error'}`,
+      value: services?.vsdc_service === 'initialized' ? 'Online' : healthLoading ? '...' : 'Offline',
+      subtext: `PDF: ${services?.pdf_service === 'initialized' ? 'Ready' : 'Error'}`,
       icon: FileText,
-      color: (healthData as any)?.services?.vsdc_service === 'initialized' ? 'green' : 'red',
+      color: services?.vsdc_service === 'initialized' ? 'green' : 'red',
       href: '/dashboard/settings'
     },
     {
       name: 'QR Generator',
-      value: healthData?.qr_generator_enabled ? 'Enabled' : healthLoading ? '...' : 'Disabled',
-      subtext: healthData?.cloudinary_configured ? 'Cloudinary OK' : 'Config Missing',
+      value: (healthData as Record<string, unknown>)?.qr_generator_enabled ? 'Enabled' : healthLoading ? '...' : 'Disabled',
+      subtext: (healthData as Record<string, unknown>)?.cloudinary_configured ? 'Cloudinary OK' : 'Config Missing',
       icon: TrendingUp,
-      color: healthData?.qr_generator_enabled ? 'green' : 'orange',
+      color: (healthData as Record<string, unknown>)?.qr_generator_enabled ? 'green' : 'orange',
       href: '/dashboard/settings'
     },
   ];
@@ -172,12 +177,12 @@ export function DashboardHome() {
             <h3 className="text-lg leading-6 font-medium text-gray-900">
               Recent Businesses
             </h3>
-            <a
+            <Link
               href="/dashboard/businesses"
               className="text-sm font-medium text-blue-600 hover:text-blue-500"
             >
               View all →
-            </a>
+            </Link>
           </div>
           
           <div className="mt-6">

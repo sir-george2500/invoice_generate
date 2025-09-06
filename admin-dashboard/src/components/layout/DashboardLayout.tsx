@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -132,20 +133,13 @@ function Sidebar({ navigation, pathname, user, onLogout }: SidebarProps) {
           <div className="flex items-center space-x-3">
             {/* Use the actual logo */}
             <div className="w-10 h-10 rounded-lg bg-white p-1 flex items-center justify-center">
-              <img 
+              <Image 
                 src="/logo.png" 
                 alt="ALSM EBM" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const fallback = target.nextElementSibling as HTMLDivElement;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
+                width={32}
+                height={32}
+                className="object-contain"
               />
-              <div className="w-8 h-8 bg-blue-600 rounded-full items-center justify-center hidden">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">ALSM EBM</h1>

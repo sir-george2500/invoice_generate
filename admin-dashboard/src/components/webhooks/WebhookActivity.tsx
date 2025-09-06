@@ -380,7 +380,13 @@ export function WebhookActivity() {
             <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
               <h4 className="text-sm font-medium text-red-800 mb-2">Recent Failures Requiring Attention</h4>
               <div className="space-y-2">
-                {recentFailures.slice(0, 3).map((failure: any) => (
+                {recentFailures.slice(0, 3).map((failure: { 
+                  id: number; 
+                  business_tin: string; 
+                  business_name: string; 
+                  invoice_number?: string; 
+                  error_code?: string; 
+                }) => (
                   <div key={failure.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center space-x-2">
                       <XCircle className="h-4 w-4 text-red-500" />

@@ -111,6 +111,19 @@ export interface AuthResponse {
   user: User;
 }
 
+// System health types
+export interface SystemHealthServices {
+  vsdc_service: 'initialized' | 'error';
+  pdf_service: 'initialized' | 'error';
+}
+
+export interface SystemHealth {
+  status: 'healthy' | 'unhealthy';
+  services: SystemHealthServices;
+  qr_generator_enabled: boolean;
+  cloudinary_configured: boolean;
+}
+
 // Error types
 export interface ApiError {
   message: string;
