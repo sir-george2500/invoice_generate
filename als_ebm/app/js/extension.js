@@ -313,85 +313,124 @@ class BusinessSetupManager {
       const fieldsToCreate = [
         {
           "field_name": "cf_tin",
-          "field_type": "TEXT",
           "field_label": "Business TIN", 
           "max_length": 50,
-          "is_required": false,
           "entity": "invoices"
         },
         {
           "field_name": "cf_customer_tin",
-          "field_type": "TEXT",
           "field_label": "Customer TIN",
           "max_length": 50,
-          "is_required": false,
           "entity": "invoices"
         },
         {
           "field_name": "cf_purchase_code",
-          "field_type": "TEXT", 
           "field_label": "Purchase Code",
           "max_length": 100,
-          "is_required": false,
           "entity": "invoices"
         },
         {
           "field_name": "cf_seller_company_address",
-          "field_type": "TEXT",
           "field_label": "Seller Company Address",
           "max_length": 255,
-          "is_required": false,
           "entity": "invoices"
         },
         {
           "field_name": "cf_organizationname",
-          "field_type": "TEXT",
           "field_label": "Seller Company Name",
           "max_length": 100,
-          "is_required": false,
           "entity": "invoices"
         },
         {
           "field_name": "cf_custtin",
-          "field_type": "TEXT",
           "field_label": "Customer TIN",
           "max_length": 50,
-          "is_required": false,
           "entity": "contacts"
         }
       ];
 
+      // First approach: Try using backend to create fields via Zoho API
+      const setupResult = await this.createFieldsViaBackend(fieldsToCreate);
+      
+      if (setupResult.success) {
+        this.setupComplete = true;
+        return setupResult;
+      }
+      
+      // Fallback approach: Try direct ZFAPPS SDK methods
+      console.log('Backend setup failed, trying direct SDK approach...');
+      const sdkResult = await this.createFieldsViaSdk(fieldsToCreate);
+      
+      if (sdkResult.success) {
+        this.setupComplete = true;
+        return sdkResult;
+      }
+      
+      // If both fail, return the better error message
+      return setupResult.results ? setupResult : sdkResult;
+      
+    } catch (error) {
+      console.error('Custom field setup failed:', error);
+      return { success: false, message: error.message, results: [] };
+    }
+  }
+
+  async createFieldsViaBackend(fieldsToCreate) {
+    try {
+      // Send custom field creation request to our backend
+      // Backend will handle Zoho API calls with proper credentials
+      const setupPayload = {
+        zoho_org_id: this.zohoOrgData.organization_id,
+        fields: fieldsToCreate
+      };
+      
+      const result = await this.auth.makeRequest('/business/setup-custom-fields', {
+        method: 'POST',
+        body: JSON.stringify(setupPayload)
+      });
+      
+      if (result.success) {
+        console.log('✅ Custom fields created via backend');
+        return { success: true, message: 'Custom fields created successfully via backend', results: result.fields || [] };
+      } else {
+        throw new Error(result.message || 'Backend setup failed');
+      }
+      
+    } catch (error) {
+      console.error('Backend custom field creation failed:', error);
+      return { success: false, message: `Backend setup failed: ${error.message}`, results: [] };
+    }
+  }
+
+  async createFieldsViaSdk(fieldsToCreate) {
+    try {
       const results = [];
       
       for (const field of fieldsToCreate) {
         try {
-          console.log(`Creating custom field: ${field.field_label} (${field.field_name})`);
+          console.log(`Creating custom field via SDK: ${field.field_label} (${field.field_name})`);
           
-          // Use ZFAPPS.request to make direct API call to Zoho Books Custom Fields API
-          const result = await ZFAPPS.request({
-            url: `https://www.zohoapis.com/books/v3/settings/customfields?organization_id=${this.zohoOrgData.organization_id}`,
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + await this.getZohoAccessToken()
-            },
-            body: JSON.stringify({
+          // Try using ZFAPPS.invoke with settings context
+          const result = await ZFAPPS.invoke('CREATE', {
+            Entity: 'settings',
+            RecordData: {
               field_name: field.field_name,
-              field_type: field.field_type,
               field_label: field.field_label,
+              field_type: 'TEXT',
               max_length: field.max_length,
-              is_required: field.is_required,
-              entity: field.entity
-            })
+              is_required: false,
+              module: field.entity
+            }
           });
           
           console.log(`✅ Created field ${field.field_name}:`, result);
           results.push({ field: field.field_name, success: true, result });
+          
         } catch (error) {
           console.error(`❌ Failed to create field ${field.field_name}:`, error);
           
           // Check if field already exists
-          if (error.message && error.message.includes('already exists')) {
+          if (error.message && (error.message.includes('already exists') || error.message.includes('duplicate'))) {
             console.log(`ℹ️ Field ${field.field_name} already exists`);
             results.push({ field: field.field_name, success: true, result: 'already exists' });
           } else {
@@ -405,47 +444,25 @@ class BusinessSetupManager {
       const totalCount = results.length;
       
       if (successCount === totalCount) {
-        this.setupComplete = true;
-        console.log('✅ All custom fields created successfully!');
+        console.log('✅ All custom fields created successfully via SDK!');
         return { success: true, message: 'All custom fields created successfully!', results };
       } else if (successCount > 0) {
-        console.log(`⚠️ Partial success: ${successCount}/${totalCount} fields created`);
+        console.log(`⚠️ Partial success via SDK: ${successCount}/${totalCount} fields created`);
         // If most fields succeeded, consider it a success
-        this.setupComplete = successCount >= totalCount * 0.8;
+        const isSuccess = successCount >= totalCount * 0.8;
         return { 
-          success: this.setupComplete, 
+          success: isSuccess, 
           message: `${successCount}/${totalCount} fields created successfully`, 
           results 
         };
       } else {
-        console.log('❌ Failed to create any custom fields');
-        return { success: false, message: 'Failed to create custom fields', results };
+        console.log('❌ Failed to create any custom fields via SDK');
+        return { success: false, message: 'Failed to create custom fields via SDK', results };
       }
       
     } catch (error) {
-      console.error('Custom field setup failed:', error);
-      return { success: false, message: error.message, results: [] };
-    }
-  }
-
-  async getZohoAccessToken() {
-    try {
-      // Try to get the access token from Zoho SDK
-      const authInfo = await ZFAPPS.get('user');
-      if (authInfo && authInfo.access_token) {
-        return authInfo.access_token;
-      }
-      
-      // Alternative approach - get organization info which might include token
-      const orgInfo = await ZFAPPS.get('organization');
-      if (orgInfo && orgInfo.access_token) {
-        return orgInfo.access_token;
-      }
-      
-      throw new Error('Unable to get Zoho access token');
-    } catch (error) {
-      console.error('Failed to get Zoho access token:', error);
-      throw error;
+      console.error('SDK custom field creation failed:', error);
+      return { success: false, message: `SDK setup failed: ${error.message}`, results: [] };
     }
   }
 }

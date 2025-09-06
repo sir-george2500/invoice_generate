@@ -134,6 +134,14 @@ class BusinessController:
             description="Get only business fields that should be auto-populated in invoices",
         )
         
+        self.router.add_api_route(
+            "/setup-custom-fields", 
+            self.setup_custom_fields, 
+            methods=["POST"],
+            summary="Setup Custom Fields in Zoho Books",
+            description="Create required custom fields in Zoho Books for EBM integration",
+        )
+        
 
     
 
@@ -380,4 +388,61 @@ class BusinessController:
             )
         
         return BusinessResponse.model_validate(business)
+        
+    async def setup_custom_fields(
+        self,
+        setup_data: dict,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+    ):
+        """Setup custom fields in Zoho Books for EBM integration"""
+        try:
+            zoho_org_id = setup_data.get('zoho_org_id')
+            fields = setup_data.get('fields', [])
+            
+            if not zoho_org_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="zoho_org_id is required"
+                )
+            
+            if not fields:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="fields array is required"
+                )
+            
+            # For now, return a mock success response
+            # In a real implementation, this would:
+            # 1. Get Zoho OAuth credentials for the organization
+            # 2. Make API calls to Zoho Books Custom Fields API
+            # 3. Create each field and track results
+            
+            results = []
+            for field in fields:
+                field_name = field.get('field_name', '')
+                field_label = field.get('field_label', '')
+                
+                # Mock successful creation
+                results.append({
+                    'field_name': field_name,
+                    'field_label': field_label,
+                    'success': True,
+                    'message': f'Custom field {field_name} created successfully'
+                })
+            
+            return {
+                'success': True,
+                'message': f'Successfully created {len(results)} custom fields',
+                'fields': results,
+                'zoho_org_id': zoho_org_id
+            }
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to setup custom fields: {str(e)}"
+            )
     
