@@ -1,0 +1,52 @@
+{
+  "fields": [
+    {
+      "resourceName": "cf_tin",
+      "module": "invoices",
+      "displayLabel": "Business TIN",
+      "type": "Text",
+      "maxLength": "50",
+      "isRequired": true
+    },
+    {
+      "resourceName": "cf_customer_tin",
+      "module": "invoices",
+      "displayLabel": "Customer TIN",
+      "type": "Text",
+      "maxLength": "50",
+      "isRequired": true
+    },
+    {
+      "resourceName": "cf_purchase_code",
+      "module": "invoices",
+      "displayLabel": "Purchase Code",
+      "type": "Text",
+      "maxLength": "100",
+      "isRequired": true
+    },
+    {
+      "resourceName": "cf_seller_company_address",
+      "module": "invoices",
+      "displayLabel": "Seller Company Address",
+      "type": "Text",
+      "maxLength": "255",
+      "isRequired": true
+    },
+    {
+      "resourceName": "cf_organizationname",
+      "module": "invoices",
+      "displayLabel": "Seller Company Name",
+      "type": "Text",
+      "maxLength": "100",
+      "isRequired": true
+    },
+    {
+      "resourceName": "cf_custtin",
+      "module": "contacts",
+      "displayLabel": "Customer TIN",
+      "type": "Text",
+      "maxLength": "50",
+      "isRequired": true
+    }
+  ]
+}

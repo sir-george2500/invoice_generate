@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  API_BASE_URL: 'https://75d163b48c76.ngrok-free.app/api/v1',
+  API_BASE_URL: 'https://de91cbb941a8.ngrok-free.app/api/v1',
   SESSION_STORAGE_KEY: 'ebm_session_id'
 };
 
