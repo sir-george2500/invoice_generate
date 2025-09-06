@@ -262,13 +262,41 @@ class BusinessSetupManager {
 
       const orgId = this.zohoOrgData.organization_id;
 
+      // Check if custom fields are set up
+      const customFieldStatus = await this.checkCustomFieldSetup(orgId);
+
       return {
         zoho_org_id: orgId,
         business_name: this.zohoOrgData.name,
-        setup_needed: false
+        setup_needed: customFieldStatus.setup_required,
+        custom_field_status: customFieldStatus
       };
     } catch (error) {
       console.error('Business setup initialization failed:', error);
+      throw error;
+    }
+  }
+
+  async checkCustomFieldSetup(zohoOrgId) {
+    try {
+      console.log('Checking custom field setup status...');
+      const response = await this.auth.makeRequest(`/custom-fields/status/${zohoOrgId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to check custom field setup:', error);
+      return { setup_required: true, error: error.message };
+    }
+  }
+
+  async setupCustomFields(zohoOrgId) {
+    try {
+      console.log('Setting up custom fields for Zoho org:', zohoOrgId);
+      const response = await this.auth.makeRequest(`/custom-fields/setup/${zohoOrgId}`, {
+        method: 'POST'
+      });
+      return response;
+    } catch (error) {
+      console.error('Custom field setup failed:', error);
       throw error;
     }
   }
@@ -463,7 +491,29 @@ class EBMPlugin {
     try {
       statusDiv.innerHTML = '<div class="status loading">Connecting...</div>';
       const businessData = await this.businessSetup.initializeBusinessSetup();
-      statusDiv.innerHTML = `<div class="status success">✅ Connected to: ${businessData.business_name}</div>`;
+      
+      if (businessData.setup_needed) {
+        statusDiv.innerHTML = '<div class="status loading">Setting up custom fields...</div>';
+        console.log('Custom field setup required, initiating setup...');
+        
+        try {
+          const setupResult = await this.businessSetup.setupCustomFields(businessData.zoho_org_id);
+          console.log('Custom field setup result:', setupResult);
+          
+          if (setupResult.setup_result.overall_status === 'success') {
+            statusDiv.innerHTML = `<div class="status success">✅ Connected to: ${businessData.business_name}<br><small>Custom fields configured successfully</small></div>`;
+          } else if (setupResult.setup_result.overall_status === 'partial_success') {
+            statusDiv.innerHTML = `<div class="status warning">⚠️ Connected to: ${businessData.business_name}<br><small>Some custom fields may need manual setup</small></div>`;
+          } else {
+            statusDiv.innerHTML = `<div class="status warning">⚠️ Connected to: ${businessData.business_name}<br><small>Custom field setup encountered issues</small></div>`;
+          }
+        } catch (setupError) {
+          console.error('Custom field setup failed:', setupError);
+          statusDiv.innerHTML = `<div class="status warning">⚠️ Connected to: ${businessData.business_name}<br><small>Custom field setup failed: ${setupError.message}</small></div>`;
+        }
+      } else {
+        statusDiv.innerHTML = `<div class="status success">✅ Connected to: ${businessData.business_name}<br><small>Custom fields already configured</small></div>`;
+      }
     } catch (error) {
       console.error('Business integration failed:', error);
       statusDiv.innerHTML = `<div class="error">❌ Failed: ${error.message}</div>`;

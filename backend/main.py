@@ -23,6 +23,7 @@ from controllers.v1.business_controller import BusinessController
 from controllers.v1.report_controller import ReportController
 from controllers.v1.transaction_controller import TransactionController
 from controllers.v1.webhook_activity_controller import WebhookActivityController
+from controllers.v1.custom_field_setup_controller import CustomFieldSetupController
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -104,6 +105,7 @@ business_controller = BusinessController()
 report_controller = ReportController()
 transaction_controller = TransactionController()
 webhook_activity_controller = WebhookActivityController()
+custom_field_setup_controller = CustomFieldSetupController()
 
 # Register controller routes
 app.include_router(auth_controller.router)
@@ -112,7 +114,8 @@ app.include_router(utility_controller.router)
 app.include_router(business_controller.router)
 app.include_router(report_controller.router)
 app.include_router(transaction_controller.router)
-app.include_router(webhook_activity_controller.router)# Add health check endpoint
+app.include_router(webhook_activity_controller.router)
+app.include_router(custom_field_setup_controller.router)# Add health check endpoint
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""

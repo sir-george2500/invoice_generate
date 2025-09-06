@@ -29,6 +29,11 @@ class Business(Base):
     setup_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     webhook_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
+    # Custom field setup tracking
+    custom_fields_setup_status: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default="pending")
+    custom_fields_setup_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    custom_fields_setup_result: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    
     # EBM Service Configuration
     ebm_service_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     
