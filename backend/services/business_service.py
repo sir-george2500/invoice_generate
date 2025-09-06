@@ -223,4 +223,42 @@ class BusinessService:
         
         return self.business_repo.update(business_id, **update_data)
     
+    def update_custom_field_setup_status(self, business_id: int, setup_data: dict) -> Optional[Business]:
+        """Update custom field setup status for a business"""
+        from datetime import datetime
+        
+        # Check if business exists
+        existing_business = self.business_repo.get_by_id(business_id)
+        if not existing_business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business not found"
+            )
+        
+        # Prepare update data with timestamp
+        update_data = setup_data.copy()
+        if "custom_fields_setup_at" not in update_data:
+            update_data["custom_fields_setup_at"] = datetime.utcnow()
+        
+        return self.business_repo.update(business_id, **update_data)
+    
+    def get_business_custom_field_status(self, business_id: int) -> dict:
+        """Get custom field setup status for a business"""
+        business = self.business_repo.get_by_id(business_id)
+        if not business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business not found"
+            )
+        
+        return {
+            "business_id": business.id,
+            "business_name": business.business_name,
+            "zoho_organization_id": business.zoho_organization_id,
+            "custom_fields_setup_status": business.custom_fields_setup_status,
+            "custom_fields_setup_at": business.custom_fields_setup_at,
+            "custom_fields_setup_result": business.custom_fields_setup_result,
+            "setup_required": business.custom_fields_setup_status not in ["success", "partial_success"]
+        }
+    
 
