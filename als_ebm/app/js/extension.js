@@ -251,6 +251,7 @@ class BusinessSetupManager {
   constructor(authManager) {
     this.auth = authManager;
     this.zohoOrgData = null;
+    this.setupComplete = false;
   }
 
   async initializeBusinessSetup() {
@@ -262,13 +263,188 @@ class BusinessSetupManager {
 
       const orgId = this.zohoOrgData.organization_id;
 
+      // Check if setup is already complete
+      await this.checkSetupStatus();
+
       return {
         zoho_org_id: orgId,
         business_name: this.zohoOrgData.name,
-        setup_needed: false
+        setup_needed: !this.setupComplete
       };
     } catch (error) {
       console.error('Business setup initialization failed:', error);
+      throw error;
+    }
+  }
+
+  async checkSetupStatus() {
+    try {
+      // Check if custom fields already exist by trying to get invoice custom fields
+      const customFields = await ZFAPPS.get('settings.customfields');
+      console.log('Existing custom fields:', customFields);
+      
+      // Check if our required fields exist
+      const requiredFields = ['cf_tin', 'cf_customer_tin', 'cf_purchase_code', 'cf_seller_company_address', 'cf_organizationname'];
+      let existingFields = 0;
+      
+      if (customFields && customFields.customfields) {
+        for (const field of customFields.customfields) {
+          if (requiredFields.includes(field.resource_name)) {
+            existingFields++;
+          }
+        }
+      }
+      
+      this.setupComplete = existingFields >= requiredFields.length;
+      console.log(`Setup status: ${existingFields}/${requiredFields.length} fields exist, complete: ${this.setupComplete}`);
+      
+      return this.setupComplete;
+    } catch (error) {
+      console.error('Failed to check setup status:', error);
+      this.setupComplete = false;
+      return false;
+    }
+  }
+
+  async setupCustomFields() {
+    try {
+      console.log('🚀 Starting custom field setup...');
+      
+      const fieldsToCreate = [
+        {
+          "field_name": "cf_tin",
+          "field_type": "TEXT",
+          "field_label": "Business TIN", 
+          "max_length": 50,
+          "is_required": false,
+          "entity": "invoices"
+        },
+        {
+          "field_name": "cf_customer_tin",
+          "field_type": "TEXT",
+          "field_label": "Customer TIN",
+          "max_length": 50,
+          "is_required": false,
+          "entity": "invoices"
+        },
+        {
+          "field_name": "cf_purchase_code",
+          "field_type": "TEXT", 
+          "field_label": "Purchase Code",
+          "max_length": 100,
+          "is_required": false,
+          "entity": "invoices"
+        },
+        {
+          "field_name": "cf_seller_company_address",
+          "field_type": "TEXT",
+          "field_label": "Seller Company Address",
+          "max_length": 255,
+          "is_required": false,
+          "entity": "invoices"
+        },
+        {
+          "field_name": "cf_organizationname",
+          "field_type": "TEXT",
+          "field_label": "Seller Company Name",
+          "max_length": 100,
+          "is_required": false,
+          "entity": "invoices"
+        },
+        {
+          "field_name": "cf_custtin",
+          "field_type": "TEXT",
+          "field_label": "Customer TIN",
+          "max_length": 50,
+          "is_required": false,
+          "entity": "contacts"
+        }
+      ];
+
+      const results = [];
+      
+      for (const field of fieldsToCreate) {
+        try {
+          console.log(`Creating custom field: ${field.field_label} (${field.field_name})`);
+          
+          // Use ZFAPPS.request to make direct API call to Zoho Books Custom Fields API
+          const result = await ZFAPPS.request({
+            url: `https://www.zohoapis.com/books/v3/settings/customfields?organization_id=${this.zohoOrgData.organization_id}`,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + await this.getZohoAccessToken()
+            },
+            body: JSON.stringify({
+              field_name: field.field_name,
+              field_type: field.field_type,
+              field_label: field.field_label,
+              max_length: field.max_length,
+              is_required: field.is_required,
+              entity: field.entity
+            })
+          });
+          
+          console.log(`✅ Created field ${field.field_name}:`, result);
+          results.push({ field: field.field_name, success: true, result });
+        } catch (error) {
+          console.error(`❌ Failed to create field ${field.field_name}:`, error);
+          
+          // Check if field already exists
+          if (error.message && error.message.includes('already exists')) {
+            console.log(`ℹ️ Field ${field.field_name} already exists`);
+            results.push({ field: field.field_name, success: true, result: 'already exists' });
+          } else {
+            results.push({ field: field.field_name, success: false, error: error.message });
+          }
+        }
+      }
+
+      // Check how many succeeded
+      const successCount = results.filter(r => r.success).length;
+      const totalCount = results.length;
+      
+      if (successCount === totalCount) {
+        this.setupComplete = true;
+        console.log('✅ All custom fields created successfully!');
+        return { success: true, message: 'All custom fields created successfully!', results };
+      } else if (successCount > 0) {
+        console.log(`⚠️ Partial success: ${successCount}/${totalCount} fields created`);
+        // If most fields succeeded, consider it a success
+        this.setupComplete = successCount >= totalCount * 0.8;
+        return { 
+          success: this.setupComplete, 
+          message: `${successCount}/${totalCount} fields created successfully`, 
+          results 
+        };
+      } else {
+        console.log('❌ Failed to create any custom fields');
+        return { success: false, message: 'Failed to create custom fields', results };
+      }
+      
+    } catch (error) {
+      console.error('Custom field setup failed:', error);
+      return { success: false, message: error.message, results: [] };
+    }
+  }
+
+  async getZohoAccessToken() {
+    try {
+      // Try to get the access token from Zoho SDK
+      const authInfo = await ZFAPPS.get('user');
+      if (authInfo && authInfo.access_token) {
+        return authInfo.access_token;
+      }
+      
+      // Alternative approach - get organization info which might include token
+      const orgInfo = await ZFAPPS.get('organization');
+      if (orgInfo && orgInfo.access_token) {
+        return orgInfo.access_token;
+      }
+      
+      throw new Error('Unable to get Zoho access token');
+    } catch (error) {
+      console.error('Failed to get Zoho access token:', error);
       throw error;
     }
   }
@@ -377,6 +553,13 @@ class EBMPlugin {
         this.handleLogout();
       });
     }
+
+    const setupBtn = document.getElementById('setup-btn');
+    if (setupBtn) {
+      setupBtn.addEventListener('click', async () => {
+        await this.handleSetup();
+      });
+    }
   }
 
   async handleLogin() {
@@ -451,7 +634,7 @@ class EBMPlugin {
 
       await this.initializeBusinessIntegration();
       await this.loadCurrentInvoice();
-      this.resizeWidget(400, 500);
+      this.resizeWidget(400, 600);
     } catch (error) {
       console.error('Failed to show main interface:', error);
       this.showError('Failed to initialize main interface: ' + error.message);
@@ -460,13 +643,75 @@ class EBMPlugin {
 
   async initializeBusinessIntegration() {
     const statusDiv = document.getElementById('ebm-status');
+    const setupStatusDiv = document.getElementById('setup-status');
+    const setupActionsDiv = document.getElementById('setup-actions');
+    
     try {
       statusDiv.innerHTML = '<div class="status loading">Connecting...</div>';
+      setupStatusDiv.innerHTML = '<div class="status loading">Checking setup status...</div>';
+      
       const businessData = await this.businessSetup.initializeBusinessSetup();
-      statusDiv.innerHTML = `<div class="status success">✅ Connected to: ${businessData.business_name}</div>`;
+      statusDiv.innerHTML = `<div class="success">✅ Connected to: ${businessData.business_name}</div>`;
+      
+      // Show setup status
+      if (businessData.setup_needed) {
+        setupStatusDiv.innerHTML = '<div class="error">⚠️ Custom fields setup required</div>';
+        setupActionsDiv.classList.remove('hidden');
+      } else {
+        setupStatusDiv.innerHTML = '<div class="success">✅ Setup complete - All custom fields configured</div>';
+        setupActionsDiv.classList.add('hidden');
+      }
+      
     } catch (error) {
       console.error('Business integration failed:', error);
       statusDiv.innerHTML = `<div class="error">❌ Failed: ${error.message}</div>`;
+      setupStatusDiv.innerHTML = `<div class="error">❌ Setup check failed: ${error.message}</div>`;
+    }
+  }
+
+  async handleSetup() {
+    const setupBtn = document.getElementById('setup-btn');
+    const setupStatusDiv = document.getElementById('setup-status');
+    const setupActionsDiv = document.getElementById('setup-actions');
+    
+    try {
+      // Disable button and show loading state
+      setupBtn.disabled = true;
+      setupBtn.textContent = '⏳ Creating Custom Fields...';
+      setupStatusDiv.innerHTML = '<div class="status loading">Creating custom fields, please wait...</div>';
+      
+      // Attempt to create custom fields
+      const result = await this.businessSetup.setupCustomFields();
+      
+      if (result.success) {
+        setupStatusDiv.innerHTML = '<div class="success">✅ Setup complete! All custom fields have been created successfully.</div>';
+        setupActionsDiv.classList.add('hidden');
+        
+        // Show success feedback and refresh in 2 seconds
+        setTimeout(() => {
+          setupStatusDiv.innerHTML = '<div class="success">✅ Setup complete - All custom fields configured</div>';
+        }, 2000);
+      } else {
+        setupStatusDiv.innerHTML = `<div class="error">❌ Setup failed: ${result.message}</div>`;
+        setupBtn.disabled = false;
+        setupBtn.textContent = '🚀 Setup Custom Fields';
+        
+        // Show detailed error info
+        if (result.results && result.results.length > 0) {
+          let details = '<br><small>Details:<br>';
+          result.results.forEach(r => {
+            details += `• ${r.field}: ${r.success ? '✅' : '❌ ' + r.error}<br>`;
+          });
+          details += '</small>';
+          setupStatusDiv.innerHTML += details;
+        }
+      }
+      
+    } catch (error) {
+      console.error('Setup failed:', error);
+      setupStatusDiv.innerHTML = `<div class="error">❌ Setup failed: ${error.message}</div>`;
+      setupBtn.disabled = false;
+      setupBtn.textContent = '🚀 Setup Custom Fields';
     }
   }
 
